@@ -5,6 +5,7 @@ import {
   archiveTaskAction,
   adminResetMilestoneAction,
   updateStartDayAction,
+  setMilestoneStartAction,
 } from "@/app/actions/tasks";
 import { Button, Input, Label, PageHeader, Card } from "@/components/ui";
 
@@ -39,11 +40,28 @@ export default async function AdminManagePage() {
         <form action={adminResetMilestoneAction}>
           <Button type="submit" variant="danger" className="w-full">Reset milestone now</Button>
         </form>
-        <form action={updateStartDayAction} className="mt-3 flex items-center gap-2">
-          <select name="startDay" defaultValue={group!.default_start_day} className="rounded-lg border border-[var(--color-border)] bg-[var(--color-background)] px-3 py-2 text-sm flex-1">
-            {DAYS.map((d, i) => <option key={i} value={i}>{d}</option>)}
-          </select>
-          <Button type="submit" variant="secondary">Save day</Button>
+
+        <form action={setMilestoneStartAction} className="mt-3 flex items-end gap-2">
+          <div className="flex-1">
+            <Label htmlFor="milestoneStart">Milestone start date</Label>
+            <Input
+              id="milestoneStart"
+              name="milestoneStart"
+              type="date"
+              defaultValue={new Date(group!.milestone_started_at).toISOString().slice(0, 10)}
+            />
+          </div>
+          <Button type="submit" variant="secondary">Save</Button>
+        </form>
+
+        <form action={updateStartDayAction} className="mt-3 flex items-end gap-2">
+          <div className="flex-1">
+            <Label htmlFor="startDay">Auto-rollover day</Label>
+            <select id="startDay" name="startDay" defaultValue={group!.default_start_day} className="w-full rounded-lg border border-[var(--color-border)] bg-[var(--color-background)] px-3 py-2 text-sm">
+              {DAYS.map((d, i) => <option key={i} value={i}>{d}</option>)}
+            </select>
+          </div>
+          <Button type="submit" variant="secondary">Save</Button>
         </form>
       </Card>
 

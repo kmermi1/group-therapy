@@ -188,6 +188,20 @@ export async function rotateGroupCodeAction() {
   revalidatePath("/admin");
 }
 
+export async function setMilestoneStartAction(formData: FormData) {
+  const admin = await requireAdmin();
+  const dateStr = String(formData.get("milestoneStart") || "").trim();
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(dateStr)) throw new Error("Invalid date.");
+  const iso = new Date(`${dateStr}T00:00:00Z`).toISOString();
+  const sb = createAdminClient();
+  await sb.from("groups").update({ milestone_started_at: iso }).eq("id", admin.groupId);
+  revalidatePath("/admin");
+  revalidatePath("/admin/manage");
+  revalidatePath("/today");
+  revalidatePath("/leaderboard");
+  revalidatePath("/history");
+}
+
 export async function updateStartDayAction(formData: FormData) {
   const admin = await requireAdmin();
   const startDay = Number(formData.get("startDay") ?? 3);

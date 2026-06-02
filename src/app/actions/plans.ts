@@ -115,6 +115,45 @@ export async function clonePlanAction(formData: FormData) {
   redirect(`/plans/${copy.id}`);
 }
 
+export async function editPlanAction(formData: FormData) {
+  const admin = await requireAdmin();
+  const planId = String(formData.get("planId") || "");
+  const name = String(formData.get("name") || "").trim();
+  const startDate = String(formData.get("startDate") || "").trim();
+  const dayLabelTemplate = String(formData.get("dayLabelTemplate") || "").trim() || null;
+  const startAtRaw = String(formData.get("startAt") || "").trim();
+  const totalDaysRaw = String(formData.get("totalDays") || "").trim();
+  const startAt = startAtRaw === "" ? null : Number(startAtRaw);
+  const totalDays = totalDaysRaw === "" ? null : Math.max(1, Number(totalDaysRaw));
+
+  if (!planId || !name || !startDate) throw new Error("Name and start date required.");
+
+  const sb = createAdminClient();
+  const { data: plan } = await sb
+    .from("reading_plans")
+    .select("id, group_id, schedule")
+    .eq("id", planId)
+    .single();
+  if (!plan || plan.group_id !== admin.groupId) throw new Error("Plan not found.");
+
+  const update: Record<string, unknown> = {
+    name,
+    start_date: startDate,
+  };
+  if (plan.schedule === "progressing") {
+    update.day_label_template = dayLabelTemplate;
+    update.start_at = startAt;
+    update.total_days = totalDays;
+  }
+  const { error } = await sb.from("reading_plans").update(update).eq("id", planId);
+  if (error) throw new Error(error.message);
+
+  revalidatePath("/admin/plans");
+  revalidatePath(`/plans/${planId}`);
+  revalidatePath("/today");
+  redirect(`/plans/${planId}`);
+}
+
 export async function closePlanAction(formData: FormData) {
   const admin = await requireAdmin();
   const planId = String(formData.get("planId") || "");

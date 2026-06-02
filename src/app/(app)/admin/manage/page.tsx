@@ -8,6 +8,7 @@ import {
   setMilestoneStartAction,
 } from "@/app/actions/tasks";
 import { Button, Input, Label, PageHeader, Card } from "@/components/ui";
+import Link from "next/link";
 
 const DAYS = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
 
@@ -126,10 +127,13 @@ export default async function AdminManagePage() {
                   {t.frequency} · {assignee}{t.target_per_milestone > 1 ? ` · ≥${t.target_per_milestone}/milestone` : ""}
                 </div>
               </div>
-              <form action={archiveTaskAction}>
-                <input type="hidden" name="taskId" value={t.id} />
-                <button className="text-xs text-red-500 underline">Archive</button>
-              </form>
+              <div className="flex flex-col items-end gap-1">
+                <Link href={`/admin/manage/${t.id}/edit`} className="text-xs text-[var(--color-accent)] underline">Edit</Link>
+                <form action={archiveTaskAction}>
+                  <input type="hidden" name="taskId" value={t.id} />
+                  <button className="text-xs text-red-500 underline">Archive</button>
+                </form>
+              </div>
             </Card>
           );
         })}

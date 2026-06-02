@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import Link from "next/link";
 import { Button, Input, Label, Card } from "@/components/ui";
 import { closePlanAction, clonePlanAction } from "@/app/actions/plans";
 import { todayInGroupTz } from "@/lib/plans";
@@ -17,6 +18,12 @@ export default function AdminPlanControls({
   const [cloning, setCloning] = useState(false);
   return (
     <div className="mt-6 space-y-3">
+      <Link
+        href={`/plans/${planId}/edit`}
+        className="block w-full text-center bg-[var(--color-card)] border border-[var(--color-border)] rounded-lg px-4 py-2.5 text-sm font-medium"
+      >
+        Edit plan
+      </Link>
       {status === "active" && (
         <form action={closePlanAction}>
           <input type="hidden" name="planId" value={planId} />

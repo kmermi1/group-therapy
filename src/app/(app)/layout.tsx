@@ -16,8 +16,8 @@ export default async function AppLayout({ children }: { children: React.ReactNod
           {isAdmin ? (
             <>
               <NavLink href="/admin" label="Status" icon="📊" />
-              <NavLink href="/admin/manage" label="Manage" icon="⚙️" />
-              <NavLink href="/leaderboard" label="Group" icon="🏆" />
+              <NavLink href="/admin/manage" label="Tasks" icon="⚙️" />
+              <NavLink href="/admin/plans" label="Plans" icon="📖" />
               <NavLink href="/profile" label="Me" icon="👤" />
             </>
           ) : (

@@ -5,6 +5,8 @@ import { getMilestoneBounds } from "@/app/actions/tasks";
 import { PageHeader } from "@/components/ui";
 import TaskRow from "./TaskRow";
 import AddPersonalTask from "./AddPersonalTask";
+import PlanCard from "./PlanCard";
+import { todayPlanDay, dayLabel, rangesActiveOnDay, formatRanges, isWithinSchedule } from "@/lib/plans";
 
 const BUCKET = "task-images";
 
@@ -75,13 +77,86 @@ export default async function TodayPage() {
     personal: { title: "Your own tasks", badgeText: "Personal", badgeClass: "bg-emerald-500/20 text-emerald-700 dark:text-emerald-300" },
   };
 
+  // ---- Reading plans ----
+  const { data: plans } = await sb
+    .from("reading_plans")
+    .select("*")
+    .eq("group_id", user.groupId)
+    .eq("status", "active");
+
+  const planCards = [];
+  for (const plan of plans ?? []) {
+    const pd = Math.max(1, todayPlanDay(plan.start_date));
+    if (!isWithinSchedule(pd, plan.total_days)) continue;
+
+    const { data: myAllocs } = await sb
+      .from("reading_plan_allocations")
+      .select("id, start_unit, end_unit, from_day, to_day")
+      .eq("plan_id", plan.id)
+      .eq("user_id", user.userId);
+
+    const { data: myComps } = await sb
+      .from("reading_plan_completions")
+      .select("plan_day")
+      .eq("plan_id", plan.id)
+      .eq("user_id", user.userId);
+
+    const completedSet = new Set((myComps ?? []).map((c) => c.plan_day));
+
+    const todayRangesArr = rangesActiveOnDay(myAllocs ?? [], pd);
+    const todayRanges = todayRangesArr.length > 0 ? formatRanges(todayRangesArr) : null;
+    const doneToday = completedSet.has(pd);
+    const todayLabelStr =
+      plan.schedule === "progressing" && plan.day_label_template && plan.start_at !== null
+        ? dayLabel(plan.day_label_template, plan.start_at, pd)
+        : null;
+
+    // outstanding = past days where user had any active allocation and no completion
+    const outstanding: { planDay: number; label: string | null; ranges: string; done: boolean }[] = [];
+    for (let d = 1; d < pd; d++) {
+      const dayRanges = rangesActiveOnDay(myAllocs ?? [], d);
+      if (dayRanges.length === 0) continue;
+      if (completedSet.has(d)) continue;
+      outstanding.push({
+        planDay: d,
+        label: plan.schedule === "progressing" && plan.day_label_template && plan.start_at !== null
+          ? dayLabel(plan.day_label_template, plan.start_at, d)
+          : null,
+        ranges: formatRanges(dayRanges),
+        done: false,
+      });
+    }
+
+    planCards.push({
+      planId: plan.id,
+      planName: plan.name,
+      schedule: plan.schedule,
+      unitLabel: plan.unit_label,
+      todayPlanDay: pd,
+      totalDays: plan.total_days,
+      todayLabel: todayLabelStr,
+      todayRanges,
+      doneToday,
+      outstandingDays: outstanding,
+    });
+  }
+
   return (
     <main className="max-w-md mx-auto w-full px-5 py-6">
       <PageHeader title="Today" subtitle={`Logged in as ${user.username}`} />
 
-      {(tasks ?? []).length === 0 ? (
+      {planCards.length > 0 && (
+        <section className="mb-6">
+          <h2 className="text-xs uppercase tracking-wide text-[var(--color-foreground)]/60 mb-2">Reading plans</h2>
+          <ul className="space-y-3">
+            {planCards.map((p) => <PlanCard key={p.planId} {...p} />)}
+          </ul>
+        </section>
+      )}
+
+      {(tasks ?? []).length === 0 && planCards.length === 0 ? (
         <p className="text-sm text-[var(--color-foreground)]/60 mb-6">No tasks yet. Add a personal one below, or hang tight for the admin.</p>
-      ) : (
+      ) : (tasks ?? []).length === 0 ? null : (
         <div className="space-y-6 mb-6">
           {(["long-term", "for-you", "group", "personal"] as const).map((key) => {
             const items = sections[key];

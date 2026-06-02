@@ -71,7 +71,7 @@ export default function ProfileRename({ currentUsername }: { currentUsername: st
             Cancel
           </button>
           <p className="text-[11px] text-[var(--color-foreground)]/60 mt-2">
-            <strong>Keep:</strong> your completions stay linked to the new name. <strong>Fresh:</strong> old data is archived and you start over.
+            <strong>Keep:</strong> stats, history, and reading-plan allocations follow your new name. <strong>Fresh start:</strong> all completions and plan slots are released, you start over. <em>Cannot be undone.</em>
           </p>
         </div>
       )}

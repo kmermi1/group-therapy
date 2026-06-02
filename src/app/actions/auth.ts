@@ -94,14 +94,14 @@ export async function joinGroupAction(formData: FormData) {
   redirect("/today");
 }
 
-export async function loginUserAction(formData: FormData) {
+export async function loginUserAction(formData: FormData): Promise<{ error?: string }> {
   const groupCode = String(formData.get("groupCode") || "").trim().toUpperCase();
   const username = String(formData.get("username") || "").trim();
   const pin = String(formData.get("pin") || "");
 
   const sb = createAdminClient();
   const { data: group } = await sb.from("groups").select("id").eq("code", groupCode).maybeSingle();
-  if (!group) throw new Error("Invalid credentials.");
+  if (!group) return { error: "Invalid credentials." };
 
   const { data: user } = await sb
     .from("users")
@@ -110,10 +110,10 @@ export async function loginUserAction(formData: FormData) {
     .eq("username", username)
     .is("archived_at", null)
     .maybeSingle();
-  if (!user) throw new Error("Invalid credentials.");
+  if (!user) return { error: "Invalid credentials." };
 
   const ok = await bcrypt.compare(pin, user.pin_hash);
-  if (!ok) throw new Error("Invalid credentials.");
+  if (!ok) return { error: "Invalid credentials." };
 
   await sb.from("users").update({ last_seen_at: new Date().toISOString() }).eq("id", user.id);
   const locale: "en" | "tr" = user.language === "tr" ? "tr" : "en";
@@ -187,14 +187,14 @@ export async function rotateAdminInviteAction() {
   revalidatePath("/admin");
 }
 
-export async function loginAdminAction(formData: FormData) {
+export async function loginAdminAction(formData: FormData): Promise<{ error?: string }> {
   const groupCode = String(formData.get("groupCode") || "").trim().toUpperCase();
   const username = String(formData.get("username") || "").trim();
   const password = String(formData.get("password") || "");
 
   const sb = createAdminClient();
   const { data: group } = await sb.from("groups").select("id").eq("code", groupCode).maybeSingle();
-  if (!group) throw new Error("Invalid credentials.");
+  if (!group) return { error: "Invalid credentials." };
 
   const { data: admin } = await sb
     .from("admins")
@@ -202,10 +202,10 @@ export async function loginAdminAction(formData: FormData) {
     .eq("group_id", group.id)
     .eq("username", username)
     .maybeSingle();
-  if (!admin) throw new Error("Invalid credentials.");
+  if (!admin) return { error: "Invalid credentials." };
 
   const ok = await bcrypt.compare(password, admin.password_hash);
-  if (!ok) throw new Error("Invalid credentials.");
+  if (!ok) return { error: "Invalid credentials." };
 
   await setSession({ kind: "admin", adminId: admin.id, groupId: group.id, username: admin.username });
   redirect("/admin");

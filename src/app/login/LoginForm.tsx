@@ -12,17 +12,12 @@ export default function LoginForm({ isAdmin }: { isAdmin: boolean }) {
     setError(null);
     start(async () => {
       try {
-        if (isAdmin) {
-          await loginAdminAction(formData);
-        } else {
-          await loginUserAction(formData);
-        }
+        const res = isAdmin ? await loginAdminAction(formData) : await loginUserAction(formData);
+        if (res?.error) setError(res.error);
+        // success path triggers a redirect, which we won't see here
       } catch (e) {
         const msg = (e as Error).message || "Login failed.";
-        // Server actions throw NEXT_REDIRECT on success — don't treat that as an error
-        if (!msg.includes("NEXT_REDIRECT")) {
-          setError(msg);
-        }
+        if (!msg.includes("NEXT_REDIRECT")) setError(msg);
       }
     });
   }

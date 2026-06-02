@@ -1,8 +1,17 @@
 import { requireAdmin, rotateAdminInviteAction } from "@/app/actions/auth";
 import { createAdminClient } from "@/lib/supabase/server";
-import { getMilestoneBounds, removeUserAction, rotateGroupCodeAction } from "@/app/actions/tasks";
-import { PageHeader, Card } from "@/components/ui";
+import {
+  getMilestoneBounds,
+  removeUserAction,
+  rotateGroupCodeAction,
+  adminResetMilestoneAction,
+  setMilestoneStartAction,
+  updateStartDayAction,
+} from "@/app/actions/tasks";
+import { Button, Input, Label, PageHeader, Card } from "@/components/ui";
 import ConfirmButton from "@/components/ConfirmButton";
+
+const DAYS = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
 
 function formatRelative(iso: string | null): string {
   if (!iso) return "never";
@@ -89,6 +98,39 @@ export default async function AdminDashboardPage() {
         </p>
         <form action={rotateAdminInviteAction} className="mt-3">
           <button className="text-xs text-red-500 underline">Rotate code (invalidate old)</button>
+        </form>
+      </Card>
+
+      <Card className="mb-4">
+        <h2 className="font-semibold mb-2">Milestone</h2>
+        <p className="text-xs text-[var(--color-foreground)]/60 mb-3">
+          Started {new Date(group.milestone_started_at).toLocaleDateString()}. Auto-rolls on {DAYS[group.default_start_day]}.
+        </p>
+        <form action={adminResetMilestoneAction}>
+          <Button type="submit" variant="danger" className="w-full">Reset milestone now</Button>
+        </form>
+
+        <form action={setMilestoneStartAction} className="mt-3 flex items-end gap-2">
+          <div className="flex-1">
+            <Label htmlFor="milestoneStart">Milestone start date</Label>
+            <Input
+              id="milestoneStart"
+              name="milestoneStart"
+              type="date"
+              defaultValue={new Date(group.milestone_started_at).toISOString().slice(0, 10)}
+            />
+          </div>
+          <Button type="submit" variant="secondary">Save</Button>
+        </form>
+
+        <form action={updateStartDayAction} className="mt-3 flex items-end gap-2">
+          <div className="flex-1">
+            <Label htmlFor="startDay">Auto-rollover day</Label>
+            <select id="startDay" name="startDay" defaultValue={group.default_start_day} className="w-full rounded-lg border border-[var(--border)] bg-[var(--card)] px-3 py-2 text-sm">
+              {DAYS.map((d, i) => <option key={i} value={i}>{d}</option>)}
+            </select>
+          </div>
+          <Button type="submit" variant="secondary">Save</Button>
         </form>
       </Card>
 

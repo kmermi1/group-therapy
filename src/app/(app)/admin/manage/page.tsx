@@ -3,20 +3,14 @@ import { createAdminClient } from "@/lib/supabase/server";
 import {
   createTaskAction,
   archiveTaskAction,
-  adminResetMilestoneAction,
-  updateStartDayAction,
-  setMilestoneStartAction,
 } from "@/app/actions/tasks";
 import { Button, Input, Label, PageHeader, Card } from "@/components/ui";
 import Link from "next/link";
-
-const DAYS = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
 
 export default async function AdminManagePage() {
   const admin = await requireAdmin();
   const sb = createAdminClient();
 
-  const { data: group } = await sb.from("groups").select("*").eq("id", admin.groupId).single();
   const { data: users } = await sb
     .from("users")
     .select("id, username")
@@ -32,39 +26,6 @@ export default async function AdminManagePage() {
   return (
     <main className="max-w-md mx-auto w-full px-5 py-6">
       <PageHeader title="Manage" />
-
-      <Card className="mb-4">
-        <h2 className="font-semibold mb-2">Milestone</h2>
-        <p className="text-xs text-[var(--color-foreground)]/60 mb-3">
-          Started {new Date(group!.milestone_started_at).toLocaleDateString()}. Auto-rolls on {DAYS[group!.default_start_day]}.
-        </p>
-        <form action={adminResetMilestoneAction}>
-          <Button type="submit" variant="danger" className="w-full">Reset milestone now</Button>
-        </form>
-
-        <form action={setMilestoneStartAction} className="mt-3 flex items-end gap-2">
-          <div className="flex-1">
-            <Label htmlFor="milestoneStart">Milestone start date</Label>
-            <Input
-              id="milestoneStart"
-              name="milestoneStart"
-              type="date"
-              defaultValue={new Date(group!.milestone_started_at).toISOString().slice(0, 10)}
-            />
-          </div>
-          <Button type="submit" variant="secondary">Save</Button>
-        </form>
-
-        <form action={updateStartDayAction} className="mt-3 flex items-end gap-2">
-          <div className="flex-1">
-            <Label htmlFor="startDay">Auto-rollover day</Label>
-            <select id="startDay" name="startDay" defaultValue={group!.default_start_day} className="w-full rounded-lg border border-[var(--color-border)] bg-[var(--color-background)] px-3 py-2 text-sm">
-              {DAYS.map((d, i) => <option key={i} value={i}>{d}</option>)}
-            </select>
-          </div>
-          <Button type="submit" variant="secondary">Save</Button>
-        </form>
-      </Card>
 
       <Card className="mb-4">
         <h2 className="font-semibold mb-3">Add task</h2>

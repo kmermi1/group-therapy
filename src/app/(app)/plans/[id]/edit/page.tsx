@@ -13,9 +13,10 @@ export default async function EditPlanPage({ params }: { params: Promise<{ id: s
   if (!plan || plan.group_id !== admin.groupId) notFound();
 
   const startDate = String(plan.start_date).slice(0, 10);
+  const isRepeating = plan.schedule === "repeating";
 
   return (
-    <main className="max-w-md mx-auto w-full px-5 py-6">
+    <main className="max-w-md mx-auto w-full px-5 py-6 reveal">
       <PageHeader title="Edit plan" />
       <form action={editPlanAction} className="space-y-4">
         <input type="hidden" name="planId" value={plan.id} />
@@ -31,40 +32,63 @@ export default async function EditPlanPage({ params }: { params: Promise<{ id: s
           </div>
         </Card>
 
-        {plan.schedule === "progressing" && (
+        {isRepeating && (
           <Card className="space-y-3">
-            <h2 className="font-semibold">Day labels</h2>
+            <h2 className="font-semibold">Units</h2>
             <div>
-              <Label htmlFor="dayLabelTemplate">Day label template</Label>
-              <Input
-                id="dayLabelTemplate"
-                name="dayLabelTemplate"
-                defaultValue={plan.day_label_template ?? "Day {n}"}
-              />
-              <p className="text-[11px] text-[var(--color-foreground)]/60 mt-1">
-                Use <code>{"{n}"}</code> as the number placeholder.
-              </p>
+              <Label htmlFor="unitLabel">Unit name</Label>
+              <Input id="unitLabel" name="unitLabel" defaultValue={plan.unit_label} placeholder="page, bab, verse…" />
             </div>
             <div className="grid grid-cols-2 gap-3">
               <div>
-                <Label htmlFor="startAt">Start at</Label>
-                <Input id="startAt" name="startAt" type="number" defaultValue={plan.start_at ?? 1} />
+                <Label htmlFor="unitsPerDay">Units per day</Label>
+                <Input id="unitsPerDay" name="unitsPerDay" type="number" min={1} defaultValue={plan.units_per_day} />
               </div>
               <div>
-                <Label htmlFor="totalDays">Total days</Label>
-                <Input id="totalDays" name="totalDays" type="number" min={1} defaultValue={plan.total_days ?? 30} />
+                <Label htmlFor="blockSize">Block size</Label>
+                <Input id="blockSize" name="blockSize" type="number" min={1} defaultValue={plan.block_size} />
               </div>
             </div>
+            <p className="text-[11px] text-[var(--foreground-mute)]">
+              Lowering units per day will release allocations that fall outside the new range — those members will need to re-claim.
+            </p>
           </Card>
         )}
 
-        <p className="text-[11px] text-[var(--color-foreground)]/60">
-          Note: <em>units per day</em> and <em>block size</em> cannot be edited once a plan is created — members may have
-          claimed ranges that depend on them. To change those, clone this plan instead.
-        </p>
+        {plan.schedule === "progressing" && (
+          <>
+            <Card className="space-y-3">
+              <h2 className="font-semibold">Day labels</h2>
+              <div>
+                <Label htmlFor="dayLabelTemplate">Day label template</Label>
+                <Input
+                  id="dayLabelTemplate"
+                  name="dayLabelTemplate"
+                  defaultValue={plan.day_label_template ?? "Day {n}"}
+                />
+                <p className="text-[11px] text-[var(--foreground-mute)] mt-1">
+                  Use <code>{"{n}"}</code> as the number placeholder.
+                </p>
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <Label htmlFor="startAt">Start at</Label>
+                  <Input id="startAt" name="startAt" type="number" defaultValue={plan.start_at ?? 1} />
+                </div>
+                <div>
+                  <Label htmlFor="totalDays">Total days</Label>
+                  <Input id="totalDays" name="totalDays" type="number" min={1} defaultValue={plan.total_days ?? 30} />
+                </div>
+              </div>
+            </Card>
+            <p className="text-[11px] text-[var(--foreground-mute)]">
+              For progressing plans, <em>units per day</em> and <em>block size</em> are locked once members have allocations. To change those, clone the plan instead.
+            </p>
+          </>
+        )}
 
         <Button type="submit" className="w-full">Save changes</Button>
-        <Link href={`/plans/${plan.id}`} className="block text-center text-sm text-[var(--color-foreground)]/60">Cancel</Link>
+        <Link href={`/plans/${plan.id}`} className="block text-center text-sm text-[var(--foreground-mute)]">Cancel</Link>
       </form>
     </main>
   );

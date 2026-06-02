@@ -123,6 +123,9 @@ export async function editPlanAction(formData: FormData) {
   const dayLabelTemplate = String(formData.get("dayLabelTemplate") || "").trim() || null;
   const startAtRaw = String(formData.get("startAt") || "").trim();
   const totalDaysRaw = String(formData.get("totalDays") || "").trim();
+  const unitLabelRaw = String(formData.get("unitLabel") || "").trim();
+  const unitsPerDayRaw = String(formData.get("unitsPerDay") || "").trim();
+  const blockSizeRaw = String(formData.get("blockSize") || "").trim();
   const startAt = startAtRaw === "" ? null : Number(startAtRaw);
   const totalDays = totalDaysRaw === "" ? null : Math.max(1, Number(totalDaysRaw));
 
@@ -131,7 +134,7 @@ export async function editPlanAction(formData: FormData) {
   const sb = createAdminClient();
   const { data: plan } = await sb
     .from("reading_plans")
-    .select("id, group_id, schedule")
+    .select("id, group_id, schedule, units_per_day, block_size, start_date")
     .eq("id", planId)
     .single();
   if (!plan || plan.group_id !== admin.groupId) throw new Error("Plan not found.");
@@ -140,11 +143,48 @@ export async function editPlanAction(formData: FormData) {
     name,
     start_date: startDate,
   };
+
   if (plan.schedule === "progressing") {
     update.day_label_template = dayLabelTemplate;
     update.start_at = startAt;
     update.total_days = totalDays;
+  } else {
+    // Repeating plans: allow editing units/block_size/unit_label too.
+    let newUnitsPerDay = plan.units_per_day;
+    let newBlockSize = plan.block_size;
+    if (unitLabelRaw) update.unit_label = unitLabelRaw;
+    if (unitsPerDayRaw) {
+      newUnitsPerDay = Math.max(1, Number(unitsPerDayRaw));
+      update.units_per_day = newUnitsPerDay;
+    }
+    if (blockSizeRaw) {
+      newBlockSize = Math.max(1, Number(blockSizeRaw));
+      update.block_size = newBlockSize;
+    }
+    if (newUnitsPerDay % newBlockSize !== 0) {
+      throw new Error("Units per day must be a multiple of block size.");
+    }
+    // If shrinking units_per_day, release allocations that fall outside the new bound.
+    if (newUnitsPerDay < plan.units_per_day) {
+      const { todayPlanDay: tpd } = await import("@/lib/plans");
+      const planDay = Math.max(1, tpd(plan.start_date));
+      const { data: badAllocs } = await sb
+        .from("reading_plan_allocations")
+        .select("id, from_day, end_unit")
+        .eq("plan_id", planId)
+        .is("to_day", null)
+        .gt("end_unit", newUnitsPerDay);
+      for (const a of badAllocs ?? []) {
+        const toDay = planDay - 1;
+        if (toDay < a.from_day) {
+          await sb.from("reading_plan_allocations").delete().eq("id", a.id);
+        } else {
+          await sb.from("reading_plan_allocations").update({ to_day: toDay }).eq("id", a.id);
+        }
+      }
+    }
   }
+
   const { error } = await sb.from("reading_plans").update(update).eq("id", planId);
   if (error) throw new Error(error.message);
 

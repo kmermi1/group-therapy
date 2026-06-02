@@ -72,10 +72,12 @@ export default async function HistoryPage() {
   for (let i = 1; i <= PAST_DAYS; i++) {
     const date = isoNDaysAgo(i);
     if (cutoff && date < cutoff) break;
+    // Any currently-active task is backfillable. We intentionally don't
+    // restrict by created_at — the admin sets the task up once, members
+    // log that they did it on whatever day. Archived tasks still respect
+    // their archive date.
     const items: DayItem[] = myTasks
       .filter((t) => {
-        const created = t.created_at.slice(0, 10);
-        if (created > date) return false;
         if (t.archived_at) {
           const archived = t.archived_at.slice(0, 10);
           if (archived <= date) return false;
@@ -101,7 +103,9 @@ export default async function HistoryPage() {
       )}
 
       {days.length === 0 ? (
-        <p className="text-sm text-[var(--color-foreground)]/60">{tr("noCompletions")}</p>
+        <p className="text-sm text-[var(--color-foreground)]/60">
+          No tasks to backfill yet — once an admin assigns tasks or you add personal ones, you&apos;ll be able to check off past days here.
+        </p>
       ) : (
         <>
           <p className="text-xs text-[var(--color-foreground)]/60 mb-3">

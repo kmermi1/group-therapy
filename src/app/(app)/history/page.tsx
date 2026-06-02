@@ -4,10 +4,25 @@ import { PageHeader, Card } from "@/components/ui";
 import { userResetHistoryAction } from "@/app/actions/tasks";
 import { t } from "@/lib/i18n";
 import { CalendarHeatmap } from "@/components/charts/CalendarHeatmap";
+import HistoryDayRow from "./HistoryDayRow";
+import { todayInGroupTz } from "@/lib/plans";
+
+const PAST_DAYS = 14;
+
+function isoNDaysAgo(n: number): string {
+  const today = todayInGroupTz();
+  const d = new Date(`${today}T00:00:00Z`);
+  d.setUTCDate(d.getUTCDate() - n);
+  return d.toISOString().slice(0, 10);
+}
 
 export default async function HistoryPage() {
   const user = await requireUser();
   const sb = createAdminClient();
+  const tr = (k: Parameters<typeof t>[0]) => t(k, user.locale);
+
+  const today = todayInGroupTz();
+  const windowStart = isoNDaysAgo(PAST_DAYS);
 
   const { data: reset } = await sb
     .from("user_history_resets")
@@ -16,26 +31,61 @@ export default async function HistoryPage() {
     .maybeSingle();
   const cutoff = reset?.reset_at ? new Date(reset.reset_at).toISOString().slice(0, 10) : null;
 
-  let query = sb
+  // All eligible (non-archived or archived-later) tasks for this user.
+  const { data: tasks } = await sb
+    .from("tasks")
+    .select("id, title, frequency, assignee_user_id, created_by_user_id, created_at, archived_at")
+    .eq("group_id", user.groupId)
+    .or(`assignee_user_id.is.null,assignee_user_id.eq.${user.userId}`);
+
+  const myTasks = (tasks ?? []).filter(
+    (t) => t.created_by_user_id === null || t.created_by_user_id === user.userId
+  );
+
+  // All my completions in the visible window (for heatmap + per-day check).
+  const startBoundForHeatmap = isoNDaysAgo(12 * 7); // 12 weeks for the heatmap
+  const heatmapStart = cutoff && cutoff > startBoundForHeatmap ? cutoff : startBoundForHeatmap;
+  const { data: heatmapComps } = await sb
     .from("task_completions")
-    .select("completed_for_date, completed_at, task_id, tasks!inner(title, frequency, group_id)")
+    .select("completed_for_date")
     .eq("user_id", user.userId)
-    .order("completed_for_date", { ascending: false })
-    .limit(200);
-  if (cutoff) query = query.gte("completed_for_date", cutoff);
+    .gte("completed_for_date", heatmapStart);
 
-  const { data: rows } = await query;
-
-  const byDate: Record<string, { title: string; freq: string }[]> = {};
   const dayCounts: Record<string, number> = {};
-  for (const r of (rows ?? []) as { completed_for_date: string; tasks: { title: string; frequency: string } | { title: string; frequency: string }[] }[]) {
-    const task = Array.isArray(r.tasks) ? r.tasks[0] : r.tasks;
-    if (!task) continue;
-    (byDate[r.completed_for_date] ||= []).push({ title: task.title, freq: task.frequency });
-    dayCounts[r.completed_for_date] = (dayCounts[r.completed_for_date] || 0) + 1;
+  for (const c of heatmapComps ?? []) {
+    dayCounts[c.completed_for_date] = (dayCounts[c.completed_for_date] || 0) + 1;
   }
 
-  const tr = (k: Parameters<typeof t>[0]) => t(k, user.locale);
+  // Completions inside the editable window (last 14 days, excluding today).
+  const editableStart = cutoff && cutoff > windowStart ? cutoff : windowStart;
+  const { data: comps } = await sb
+    .from("task_completions")
+    .select("task_id, completed_for_date")
+    .eq("user_id", user.userId)
+    .gte("completed_for_date", editableStart)
+    .lt("completed_for_date", today);
+  const compSet = new Set((comps ?? []).map((c) => `${c.task_id}:${c.completed_for_date}`));
+
+  // Build the day list (newest first), only days at/after the editable start.
+  type DayItem = { task: typeof myTasks[number]; done: boolean };
+  const days: { date: string; items: DayItem[] }[] = [];
+  for (let i = 1; i <= PAST_DAYS; i++) {
+    const date = isoNDaysAgo(i);
+    if (cutoff && date < cutoff) break;
+    const items: DayItem[] = myTasks
+      .filter((t) => {
+        const created = t.created_at.slice(0, 10);
+        if (created > date) return false;
+        if (t.archived_at) {
+          const archived = t.archived_at.slice(0, 10);
+          if (archived <= date) return false;
+        }
+        return true;
+      })
+      .map((task) => ({ task, done: compSet.has(`${task.id}:${date}`) }));
+    if (items.length > 0) days.push({ date, items });
+  }
+
   return (
     <main className="max-w-md mx-auto w-full px-5 py-6">
       <PageHeader title={tr("historyTitle")} subtitle={tr("historySubtitle")} />
@@ -50,24 +100,33 @@ export default async function HistoryPage() {
         </Card>
       )}
 
-      {Object.keys(byDate).length === 0 ? (
+      {days.length === 0 ? (
         <p className="text-sm text-[var(--color-foreground)]/60">{tr("noCompletions")}</p>
       ) : (
-        <div className="space-y-3">
-          {Object.entries(byDate).map(([date, items]) => (
-            <Card key={date}>
-              <div className="text-xs uppercase tracking-wide text-[var(--color-foreground)]/60 mb-1">{date}</div>
-              <ul className="space-y-1">
-                {items.map((it, i) => (
-                  <li key={i} className="text-sm flex items-center justify-between">
-                    <span>{it.title}</span>
-                    <span className="text-[10px] uppercase text-[var(--color-foreground)]/50">{it.freq}</span>
-                  </li>
-                ))}
-              </ul>
-            </Card>
-          ))}
-        </div>
+        <>
+          <p className="text-xs text-[var(--color-foreground)]/60 mb-3">
+            Tap to retroactively check off days you forgot.
+          </p>
+          <div className="space-y-3">
+            {days.map(({ date, items }) => (
+              <Card key={date}>
+                <div className="text-xs uppercase tracking-wide text-[var(--color-foreground)]/60 mb-2">{date}</div>
+                <ul className="space-y-2">
+                  {items.map(({ task, done }) => (
+                    <HistoryDayRow
+                      key={task.id}
+                      taskId={task.id}
+                      title={task.title}
+                      frequency={task.frequency}
+                      forDate={date}
+                      done={done}
+                    />
+                  ))}
+                </ul>
+              </Card>
+            ))}
+          </div>
+        </>
       )}
     </main>
   );

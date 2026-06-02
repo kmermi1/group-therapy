@@ -5,9 +5,8 @@ import { userResetHistoryAction } from "@/app/actions/tasks";
 import { t } from "@/lib/i18n";
 import { CalendarHeatmap } from "@/components/charts/CalendarHeatmap";
 import HistoryDayRow from "./HistoryDayRow";
-import { todayInGroupTz } from "@/lib/plans";
-
-const PAST_DAYS = 14;
+import { todayInGroupTz, daysBetween } from "@/lib/plans";
+import { getMilestoneBounds } from "@/app/actions/tasks";
 
 function isoNDaysAgo(n: number): string {
   const today = todayInGroupTz();
@@ -22,7 +21,11 @@ export default async function HistoryPage() {
   const tr = (k: Parameters<typeof t>[0]) => t(k, user.locale);
 
   const today = todayInGroupTz();
-  const windowStart = isoNDaysAgo(PAST_DAYS);
+  const { milestoneStart } = await getMilestoneBounds(user.groupId);
+  const milestoneStartIso = milestoneStart.toISOString().slice(0, 10);
+  const windowStart = milestoneStartIso;
+  // how many past days between milestone start and today (exclusive of today)
+  const pastDayCount = Math.max(0, daysBetween(milestoneStartIso, today));
 
   const { data: reset } = await sb
     .from("user_history_resets")
@@ -66,11 +69,12 @@ export default async function HistoryPage() {
     .lt("completed_for_date", today);
   const compSet = new Set((comps ?? []).map((c) => `${c.task_id}:${c.completed_for_date}`));
 
-  // Build the day list (newest first), only days at/after the editable start.
+  // Build the day list (newest first) from milestone start through yesterday.
   type DayItem = { task: typeof myTasks[number]; done: boolean };
   const days: { date: string; items: DayItem[] }[] = [];
-  for (let i = 1; i <= PAST_DAYS; i++) {
+  for (let i = 1; i <= pastDayCount; i++) {
     const date = isoNDaysAgo(i);
+    if (date < windowStart) break;
     if (cutoff && date < cutoff) break;
     // Any currently-active task is backfillable. We intentionally don't
     // restrict by created_at — the admin sets the task up once, members
@@ -109,7 +113,7 @@ export default async function HistoryPage() {
       ) : (
         <>
           <p className="text-xs text-[var(--color-foreground)]/60 mb-3">
-            Tap to retroactively check off days you forgot.
+            Tap to retroactively check off days from this milestone (since {milestoneStartIso}).
           </p>
           <div className="space-y-3">
             {days.map(({ date, items }) => (

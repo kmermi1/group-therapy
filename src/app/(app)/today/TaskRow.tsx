@@ -70,54 +70,49 @@ export default function TaskRow({
   }
 
   return (
-    <li
-      className="rounded-2xl border border-[var(--border)] bg-[var(--card)] p-4"
-      style={{ boxShadow: "var(--shadow-paper)" }}
-    >
+    <li className="rounded-2xl border border-[var(--border)] bg-[var(--card)] p-4 shadow-[var(--shadow-sm)] hover:shadow-[var(--shadow-md)] transition">
       <div className="flex items-start gap-3">
         <button
           onClick={onToggle}
           disabled={pending}
           aria-label={optimisticDone ? "Unmark today" : "Mark done today"}
-          className={`mt-0.5 h-8 w-8 rounded-full border flex items-center justify-center transition shrink-0 ${
+          className={`mt-0.5 h-7 w-7 rounded-lg border-2 flex items-center justify-center transition shrink-0 ${
             optimisticDone
-              ? "bg-[var(--accent)] border-[var(--accent)] text-[var(--accent-fg)] shadow-[0_2px_8px_-3px_rgba(45,106,79,0.55)]"
-              : "border-[var(--border)] bg-[var(--paper-deep)]"
+              ? "bg-[var(--accent)] border-[var(--accent)] text-[var(--accent-fg)]"
+              : "border-[var(--border)] hover:border-[var(--accent)]"
           }`}
         >
-          {optimisticDone ? <span className="text-[14px] leading-none">✓</span> : null}
+          {optimisticDone ? <span className="text-sm leading-none font-bold">✓</span> : null}
         </button>
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2 flex-wrap">
-            <h3 className={`display text-[16px] tracking-tight ${metTarget ? "line-through opacity-60" : ""}`}>
+            <h3 className={`font-semibold text-[15px] ${metTarget ? "line-through opacity-50" : ""}`}>
               {task.title}
             </h3>
-            <span className={`text-[9px] uppercase tracking-[0.14em] px-2 py-0.5 rounded-full ${badgeClass}`}>
+            <span className={`text-[10px] uppercase tracking-wide px-2 py-0.5 rounded-md font-medium ${badgeClass}`}>
               {badgeText}
             </span>
             {(target > 1 || isLongTerm) && (
-              <span className={`text-[10px] numeric px-2 py-0.5 rounded-full ${metTarget ? "bg-[var(--accent-soft)] text-[var(--accent)]" : "bg-[var(--paper-deep)] text-[var(--foreground-mute)]"}`}>
-                {optimisticCount}/{target}{isLongTerm ? ` · ${tr("allTime")}` : ""}
+              <span className={`text-[10px] numeric px-2 py-0.5 rounded-md ${metTarget ? "bg-emerald-500/15 text-emerald-600 dark:text-emerald-300" : "bg-[var(--surface)] text-[var(--foreground-mute)]"}`}>
+                {optimisticCount}/{target}{isLongTerm ? ` ${tr("allTime")}` : ""}
               </span>
             )}
           </div>
           {task.description && (
-            <p className="text-[13px] text-[var(--foreground-mute)] mt-1 leading-relaxed italic">
-              {task.description}
-            </p>
+            <p className="text-sm text-[var(--foreground-mute)] mt-1 leading-relaxed">{task.description}</p>
           )}
-          <div className="flex items-center gap-3 mt-2.5">
+          <div className="flex items-center gap-3 mt-2">
             {imageUrl && (
-              <button type="button" onClick={() => setShowImage((v) => !v)} className="text-[11px] text-[var(--accent)] underline-offset-2 hover:underline">
+              <button type="button" onClick={() => setShowImage((v) => !v)} className="text-xs text-[var(--accent)] hover:underline">
                 {showImage ? tr("hideImage") : tr("viewImage")}
               </button>
             )}
             {canDelete && (
-              <button type="button" onClick={onDelete} className="text-[11px] text-[#a8412e] underline-offset-2 hover:underline">
+              <button type="button" onClick={onDelete} className="text-xs text-[var(--danger)] hover:underline">
                 {tr("delete")}
               </button>
             )}
-            <span className="text-[10px] text-[var(--foreground-mute)] ml-auto tracking-[0.08em] uppercase">
+            <span className="text-[11px] text-[var(--foreground-mute)] ml-auto">
               {optimisticDone ? tr("doneToday") : tr("notDoneToday")}
             </span>
           </div>

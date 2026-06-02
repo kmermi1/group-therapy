@@ -93,15 +93,15 @@ export default async function HistoryPage() {
   }
 
   return (
-    <main className="max-w-md mx-auto w-full px-5 py-7 reveal">
+    <main className="max-w-md mx-auto w-full px-5 py-6 reveal">
       <PageHeader title={tr("historyTitle")} subtitle={tr("historySubtitle")} />
       <form action={userResetHistoryAction} className="mb-4">
-        <button className="text-[11px] text-[#a8412e] underline underline-offset-2">{tr("resetMyHistory")}</button>
+        <button className="text-xs text-[var(--danger)] hover:underline">{tr("resetMyHistory")}</button>
       </form>
 
       {Object.keys(dayCounts).length > 0 && (
         <Card className="mb-4 overflow-x-auto">
-          <div className="text-[10px] uppercase tracking-[0.18em] text-[var(--foreground-mute)] mb-2">Last 12 weeks</div>
+          <div className="text-xs uppercase tracking-wide text-[var(--foreground-mute)] font-medium mb-2">Last 12 weeks</div>
           <CalendarHeatmap counts={dayCounts} weeks={12} />
         </Card>
       )}

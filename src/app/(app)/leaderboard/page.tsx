@@ -63,19 +63,19 @@ export default async function LeaderboardPage({
   const locale = s.kind === "user" ? s.locale : "en";
   const tr = (k: Parameters<typeof t>[0], p?: Record<string, string | number>) => t(k, locale, p);
   return (
-    <main className="max-w-md mx-auto w-full px-5 py-7 reveal">
+    <main className="max-w-md mx-auto w-full px-5 py-6 reveal">
       <PageHeader title={tr("groupTitle")} subtitle={tr("currentMilestoneSince", { date: milestoneStart.toLocaleDateString() })} />
 
-      <div className="flex gap-1 mb-6 p-1 bg-[var(--paper-deep)] rounded-xl border border-[var(--border)]">
+      <div className="flex gap-1 mb-5 p-1 bg-[var(--surface)] rounded-xl">
         <Link
           href="/leaderboard"
-          className={`flex-1 text-center py-2 rounded-lg text-[12px] font-medium tracking-[0.06em] uppercase ${view === "people" ? "bg-[var(--card)] text-[var(--foreground)] shadow-sm" : "text-[var(--foreground-mute)]"}`}
+          className={`flex-1 text-center py-2 rounded-lg text-sm font-medium transition ${view === "people" ? "bg-[var(--card)] text-[var(--foreground)] shadow-[var(--shadow-sm)]" : "text-[var(--foreground-mute)]"}`}
         >
           {tr("byPerson")}
         </Link>
         <Link
           href="/leaderboard?view=tasks"
-          className={`flex-1 text-center py-2 rounded-lg text-[12px] font-medium tracking-[0.06em] uppercase ${view === "tasks" ? "bg-[var(--card)] text-[var(--foreground)] shadow-sm" : "text-[var(--foreground-mute)]"}`}
+          className={`flex-1 text-center py-2 rounded-lg text-sm font-medium transition ${view === "tasks" ? "bg-[var(--card)] text-[var(--foreground)] shadow-[var(--shadow-sm)]" : "text-[var(--foreground-mute)]"}`}
         >
           {tr("byTask")}
         </Link>

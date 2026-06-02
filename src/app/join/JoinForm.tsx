@@ -95,7 +95,7 @@ export default function JoinForm() {
           </div>
           <div>
             <Label htmlFor="pin">{tr("pinLabel")}</Label>
-            <Input id="pin" name="pin" type="password" inputMode="numeric" required minLength={4} maxLength={20} pattern="[0-9]*" />
+            <Input id="pin" name="pin" type="password" inputMode="numeric" required minLength={4} maxLength={20} />
             <p className="text-xs text-[var(--color-foreground)]/60 mt-1">{tr("pinHint")}</p>
           </div>
           {error && <p className="text-sm text-red-500">{error}</p>}

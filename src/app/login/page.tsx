@@ -41,7 +41,7 @@ export default async function LoginPage({ searchParams }: { searchParams: Promis
         ) : (
           <div>
             <Label htmlFor="pin">PIN</Label>
-            <Input id="pin" name="pin" type="password" inputMode="numeric" required pattern="[0-9]*" />
+            <Input id="pin" name="pin" type="password" inputMode="numeric" required />
           </div>
         )}
         <Button type="submit" className="w-full">Log in</Button>

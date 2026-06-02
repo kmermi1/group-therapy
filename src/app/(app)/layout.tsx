@@ -2,6 +2,7 @@ import Link from "next/link";
 import { getSession } from "@/lib/session";
 import { redirect } from "next/navigation";
 import { t } from "@/lib/i18n";
+import FeedbackButton from "@/components/FeedbackButton";
 
 export default async function AppLayout({ children }: { children: React.ReactNode }) {
   const s = await getSession();
@@ -13,6 +14,7 @@ export default async function AppLayout({ children }: { children: React.ReactNod
   return (
     <div className="flex-1 flex flex-col pb-20">
       <div className="flex-1">{children}</div>
+      <FeedbackButton locale={locale} />
       <nav className="fixed bottom-0 inset-x-0 border-t border-[var(--color-border)] bg-[var(--color-background)] z-10">
         <div className="max-w-md mx-auto grid grid-cols-4">
           {isAdmin ? (

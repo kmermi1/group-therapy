@@ -129,6 +129,14 @@ const en = {
   renameExplain:
     "Keep: stats, history, and reading-plan allocations follow your new name. Fresh start: all completions and plan slots are released, you start over. Cannot be undone.",
   logOut: "Log out",
+  feedback: "Feedback",
+  feedbackPrompt: "Have feedback or a bug to report?",
+  feedbackPlaceholder: "What's on your mind?",
+  sendAnonymously: "Send anonymously",
+  sendAnonymouslyHint: "If on, your username is not attached. The admin sees only the message.",
+  send: "Send",
+  sending: "Sending...",
+  feedbackThanks: "Thanks — your feedback was sent.",
   languageSetting: "Language",
   languageHint: "Affects the app interface for you only. Other members keep their preference.",
 
@@ -262,6 +270,14 @@ const tr: Partial<typeof en> = {
   renameExplain:
     "Geçmişi koru: istatistikler, geçmiş ve okuma planı atamaları yeni ismine taşınır. Sıfırdan başla: tüm tamamlamalar ve plan atamaların serbest bırakılır, sıfırdan başlarsın. Geri alınamaz.",
   logOut: "Çıkış yap",
+  feedback: "Geri bildirim",
+  feedbackPrompt: "Görüşlerin veya bildireceğin bir hata mı var?",
+  feedbackPlaceholder: "Aklındakini yaz...",
+  sendAnonymously: "Anonim gönder",
+  sendAnonymouslyHint: "Açıksa kullanıcı adın eklenmez. Yönetici sadece mesajı görür.",
+  send: "Gönder",
+  sending: "Gönderiliyor...",
+  feedbackThanks: "Teşekkürler — geri bildirimin iletildi.",
   languageSetting: "Dil",
   languageHint: "Sadece senin için arayüz dilini değiştirir. Diğer üyeler kendi seçimlerini korur.",
 

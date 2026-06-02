@@ -57,7 +57,7 @@ const en = {
   // Bottom nav
   navToday: "Today",
   navHistory: "History",
-  navGroup: "Group",
+  navGroup: "Leaderboard",
   navMe: "Profile",
 
   // Today
@@ -100,7 +100,7 @@ const en = {
   noCompletions: "No completions yet.",
 
   // Leaderboard
-  groupTitle: "Group",
+  groupTitle: "Leaderboard",
   currentMilestoneSince: "Current milestone since {date}",
   byPerson: "By person",
   byTask: "By task",
@@ -189,7 +189,7 @@ const tr: Partial<typeof en> = {
 
   navToday: "Bugün",
   navHistory: "Geçmiş",
-  navGroup: "Grup",
+  navGroup: "Sıralama",
   navMe: "Profil",
 
   todayTitle: "Bugün",
@@ -229,7 +229,7 @@ const tr: Partial<typeof en> = {
   resetMyHistory: "Geçmişimi sıfırla (şimdiye kadar olanları gizle)",
   noCompletions: "Henüz tamamlanmış bir şey yok.",
 
-  groupTitle: "Grup",
+  groupTitle: "Sıralama",
   currentMilestoneSince: "Bu dönem {date}'den beri sürüyor",
   byPerson: "Kişiye göre",
   byTask: "Göreve göre",

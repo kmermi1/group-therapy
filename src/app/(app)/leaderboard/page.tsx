@@ -4,6 +4,7 @@ import { getMilestoneBounds } from "@/app/actions/tasks";
 import { PageHeader, Card } from "@/components/ui";
 import Link from "next/link";
 import { t } from "@/lib/i18n";
+import { ProgressBar } from "@/components/charts/ProgressBar";
 
 export default async function LeaderboardPage({
   searchParams,
@@ -81,7 +82,14 @@ export default async function LeaderboardPage({
       </div>
 
       {view === "people" ? (
-        <PeopleView users={users ?? []} totals={userTotal} currentUserId={s.kind === "user" ? s.userId : null} />
+        <PeopleView
+          users={users ?? []}
+          totals={userTotal}
+          tasks={tasks ?? []}
+          counts={userTaskCount}
+          allTime={userTaskAllTime}
+          currentUserId={s.kind === "user" ? s.userId : null}
+        />
       ) : (
         <TasksView tasks={tasks ?? []} users={users ?? []} counts={userTaskCount} allTime={userTaskAllTime} currentUserId={s.kind === "user" ? s.userId : null} />
       )}
@@ -92,30 +100,52 @@ export default async function LeaderboardPage({
 function PeopleView({
   users,
   totals,
+  tasks,
+  counts,
+  allTime,
   currentUserId,
 }: {
   users: { id: string; username: string }[];
   totals: Record<string, number>;
+  tasks: { id: string; assignee_user_id: string | null; target_per_milestone: number; total_target: number | null }[];
+  counts: Record<string, number>;
+  allTime: Record<string, number>;
   currentUserId: string | null;
 }) {
   if (users.length === 0) {
     return <p className="text-sm text-[var(--color-foreground)]/60">No one in the group yet.</p>;
   }
+  // For each user: max possible (sum of their assigned tasks' targets) and done (sum across tasks of min(count, target)).
   const rows = users
-    .map((u) => ({ id: u.id, username: u.username, count: totals[u.id] ?? 0 }))
-    .sort((a, b) => b.count - a.count);
+    .map((u) => {
+      const myTasks = tasks.filter((t) => t.assignee_user_id === null || t.assignee_user_id === u.id);
+      let max = 0;
+      let done = 0;
+      for (const t of myTasks) {
+        const tgt = t.total_target ?? t.target_per_milestone;
+        const src = t.total_target ? allTime : counts;
+        const c = src[`${u.id}:${t.id}`] ?? 0;
+        max += tgt;
+        done += Math.min(c, tgt);
+      }
+      return { id: u.id, username: u.username, count: totals[u.id] ?? 0, done, max };
+    })
+    .sort((a, b) => (b.max > 0 ? b.done / b.max : 0) - (a.max > 0 ? a.done / a.max : 0));
   return (
     <ol className="space-y-2">
       {rows.map((r, i) => (
         <li
           key={r.id}
-          className={`flex items-center gap-3 rounded-xl border border-[var(--color-border)] bg-[var(--color-card)] p-3 ${
+          className={`rounded-xl border border-[var(--color-border)] bg-[var(--color-card)] p-3 ${
             r.id === currentUserId ? "ring-2 ring-[var(--color-accent)]" : ""
           }`}
         >
-          <span className="w-6 text-center text-sm font-bold text-[var(--color-foreground)]/60">{i + 1}</span>
-          <span className="flex-1 font-medium">{r.username}</span>
-          <span className="text-sm font-mono">{r.count}</span>
+          <div className="flex items-center gap-3">
+            <span className="w-6 text-center text-sm font-bold text-[var(--color-foreground)]/60">{i + 1}</span>
+            <span className="flex-1 font-medium">{r.username}</span>
+            <span className="text-sm font-mono">{r.done}/{r.max}</span>
+          </div>
+          <ProgressBar value={r.done} max={Math.max(1, r.max)} className="mt-2" />
         </li>
       ))}
     </ol>
@@ -169,16 +199,16 @@ function TasksView({
                 <span className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-[var(--color-border)]/60">≥{t.target_per_milestone}</span>
               )}
             </div>
-            <ul className="space-y-1">
+            <ul className="space-y-2">
               {rows.map((r) => (
-                <li
-                  key={r.id}
-                  className={`flex items-center gap-2 text-sm ${r.id === currentUserId ? "font-semibold" : ""}`}
-                >
-                  <span className="flex-1 truncate">{r.username}</span>
-                  <span className={`font-mono text-xs px-1.5 py-0.5 rounded ${r.met ? "bg-emerald-500/30 text-emerald-700 dark:text-emerald-300" : "bg-[var(--color-border)]/60"}`}>
-                    {r.count}/{target}
-                  </span>
+                <li key={r.id} className={r.id === currentUserId ? "font-semibold" : ""}>
+                  <div className="flex items-center gap-2 text-sm">
+                    <span className="flex-1 truncate">{r.username}</span>
+                    <span className={`font-mono text-xs px-1.5 py-0.5 rounded ${r.met ? "bg-emerald-500/30 text-emerald-700 dark:text-emerald-300" : "bg-[var(--color-border)]/60"}`}>
+                      {r.count}/{target}
+                    </span>
+                  </div>
+                  <ProgressBar value={Math.min(r.count, target)} max={target} className="mt-1" tone={r.met ? "success" : "accent"} />
                 </li>
               ))}
               {rows.length === 0 && (

@@ -5,6 +5,8 @@ import { PageHeader, Card } from "@/components/ui";
 import { todayPlanDay, dayLabel, rangesActiveOnDay, formatRanges } from "@/lib/plans";
 import AllocationGrid from "./AllocationGrid";
 import AdminPlanControls from "./AdminPlanControls";
+import { ProgressRing } from "@/components/charts/ProgressRing";
+import { TrajectoryChart } from "@/components/charts/TrajectoryChart";
 
 export default async function PlanPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
@@ -25,6 +27,11 @@ export default async function PlanPage({ params }: { params: Promise<{ id: strin
     .select("id, user_id, start_unit, end_unit, from_day, to_day")
     .eq("plan_id", plan.id)
     .order("start_unit");
+
+  const { data: comps } = await sb
+    .from("reading_plan_completions")
+    .select("user_id, plan_day")
+    .eq("plan_id", plan.id);
 
   const planDay = Math.max(1, todayPlanDay(plan.start_date));
   const activeAllocs = (allocs ?? []).filter((a) => a.to_day === null || a.to_day >= planDay);
@@ -60,6 +67,45 @@ export default async function PlanPage({ params }: { params: Promise<{ id: strin
         <Card className="mb-4">
           <div className="text-xs uppercase tracking-wide text-[var(--color-foreground)]/60">Your {plan.unit_label}s today</div>
           <div className="text-lg font-semibold mt-1">{formatRanges(meRanges)}</div>
+        </Card>
+      )}
+
+      {plan.schedule === "progressing" && plan.total_days && (users ?? []).length > 0 && (
+        <Card className="mb-4">
+          <div className="text-xs uppercase tracking-wide text-[var(--color-foreground)]/60 mb-3">Member progress</div>
+          <div className="grid grid-cols-3 gap-3">
+            {(users ?? []).map((u) => {
+              const userDays = new Set((comps ?? []).filter((c) => c.user_id === u.id).map((c) => c.plan_day));
+              return (
+                <div key={u.id} className="flex flex-col items-center">
+                  <ProgressRing value={userDays.size} max={plan.total_days!} size={48} strokeWidth={5} />
+                  <div className="text-[11px] mt-1 truncate w-full text-center">{u.username}</div>
+                </div>
+              );
+            })}
+          </div>
+          {s.kind === "user" && (() => {
+            const userDays = (comps ?? []).filter((c) => c.user_id === s.userId);
+            if (userDays.length === 0) return null;
+            const cumulative: number[] = [];
+            let running = 0;
+            const sortedDays = userDays.map((c) => c.plan_day).sort((a, b) => a - b);
+            for (let d = 1; d <= plan.total_days!; d++) {
+              if (sortedDays.includes(d)) running++;
+              cumulative.push(running);
+            }
+            return (
+              <div className="mt-4">
+                <div className="text-xs text-[var(--color-foreground)]/60 mb-1">Your trajectory</div>
+                <TrajectoryChart
+                  cumulative={cumulative}
+                  totalDays={plan.total_days!}
+                  target={plan.total_days!}
+                  currentDay={Math.min(planDay, plan.total_days!)}
+                />
+              </div>
+            );
+          })()}
         </Card>
       )}
 

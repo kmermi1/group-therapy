@@ -9,6 +9,19 @@ import PlanCard from "./PlanCard";
 import { todayPlanDay, dayLabel, rangesActiveOnDay, formatRanges, isWithinSchedule } from "@/lib/plans";
 import { t } from "@/lib/i18n";
 
+function SectionHeader({ icon, title, desc, count }: { icon: string; title: string; desc: string; count: number }) {
+  return (
+    <header className="mb-3">
+      <div className="flex items-baseline gap-2">
+        <span className="text-base">{icon}</span>
+        <h2 className="text-base font-semibold">{title}</h2>
+        <span className="text-xs font-mono text-[var(--color-foreground)]/50">{count}</span>
+      </div>
+      <p className="text-xs text-[var(--color-foreground)]/60 ml-7">{desc}</p>
+    </header>
+  );
+}
+
 const BUCKET = "task-images";
 
 export default async function TodayPage() {
@@ -74,11 +87,11 @@ export default async function TodayPage() {
   };
   for (const task of tasks ?? []) sections[categorize(task)]!.push(task);
 
-  const labels: Record<string, { title: string; badgeText: string; badgeClass: string }> = {
-    "long-term": { title: tr("sectionLongTerm"), badgeText: tr("badgeLongTerm"), badgeClass: "bg-purple-500/20 text-purple-700 dark:text-purple-300" },
-    "for-you": { title: tr("sectionAssignedToYou"), badgeText: tr("badgeForYou"), badgeClass: "bg-amber-500/20 text-amber-700 dark:text-amber-300" },
-    group: { title: tr("sectionGroupTasks"), badgeText: tr("badgeGroup"), badgeClass: "bg-sky-500/20 text-sky-700 dark:text-sky-300" },
-    personal: { title: tr("sectionPersonal"), badgeText: tr("badgePersonal"), badgeClass: "bg-emerald-500/20 text-emerald-700 dark:text-emerald-300" },
+  const labels: Record<string, { title: string; desc: string; icon: string; badgeText: string; badgeClass: string }> = {
+    "long-term": { title: tr("sectionLongTerm"), desc: tr("sectionLongTermDesc"), icon: "🎯", badgeText: tr("badgeLongTerm"), badgeClass: "bg-purple-500/20 text-purple-700 dark:text-purple-300" },
+    "for-you": { title: tr("sectionAssignedToYou"), desc: tr("sectionAssignedToYouDesc"), icon: "📌", badgeText: tr("badgeForYou"), badgeClass: "bg-amber-500/20 text-amber-700 dark:text-amber-300" },
+    group: { title: tr("sectionGroupTasks"), desc: tr("sectionGroupTasksDesc"), icon: "🌍", badgeText: tr("badgeGroup"), badgeClass: "bg-sky-500/20 text-sky-700 dark:text-sky-300" },
+    personal: { title: tr("sectionPersonal"), desc: tr("sectionPersonalDesc"), icon: "🪴", badgeText: tr("badgePersonal"), badgeClass: "bg-emerald-500/20 text-emerald-700 dark:text-emerald-300" },
   };
 
   // ---- Reading plans ----
@@ -150,56 +163,60 @@ export default async function TodayPage() {
       <PageHeader title={tr("todayTitle")} subtitle={tr("todaySubtitleLoggedInAs", { name: user.username })} />
 
       {planCards.length > 0 && (
-        <section className="mb-6">
-          <h2 className="text-xs uppercase tracking-wide text-[var(--color-foreground)]/60 mb-2">{tr("sectionReadingPlans")}</h2>
+        <section className="mb-7">
+          <SectionHeader icon="📖" title={tr("sectionReadingPlans")} desc={tr("sectionReadingPlansDesc")} count={planCards.length} />
           <ul className="space-y-3">
             {planCards.map((p) => <PlanCard key={p.planId} {...p} locale={locale} />)}
           </ul>
         </section>
       )}
 
-      {(tasks ?? []).length === 0 && planCards.length === 0 ? (
+      {(tasks ?? []).length === 0 && planCards.length === 0 && (
         <p className="text-sm text-[var(--color-foreground)]/60 mb-6">{tr("noTasksYet")}</p>
-      ) : (tasks ?? []).length === 0 ? null : (
-        <div className="space-y-6 mb-6">
-          {(["long-term", "for-you", "group", "personal"] as const).map((key) => {
-            const items = sections[key];
-            if (!items || items.length === 0) return null;
-            const label = labels[key];
-            return (
-              <section key={key}>
-                <h2 className="text-xs uppercase tracking-wide text-[var(--color-foreground)]/60 mb-2">{label.title}</h2>
-                <ul className="space-y-3">
-                  {items.map((t) => {
-                    const isLongTerm = !!t.total_target;
-                    const count = isLongTerm ? (totalCounts[t.id] || 0) : (milestoneCounts[t.id] || 0);
-                    const target = isLongTerm ? t.total_target! : t.target_per_milestone;
-                    const doneToday = doneTodaySet.has(t.id);
-                    return (
-                      <TaskRow
-                        key={t.id}
-                        task={t}
-                        doneToday={doneToday}
-                        count={count}
-                        target={target}
-                        isLongTerm={isLongTerm}
-                        forDate={today}
-                        imageUrl={signed[t.id]}
-                        badgeText={label.badgeText}
-                        badgeClass={label.badgeClass}
-                        canDelete={key === "personal"}
-                        locale={locale}
-                      />
-                    );
-                  })}
-                </ul>
-              </section>
-            );
-          })}
-        </div>
       )}
 
-      <AddPersonalTask locale={locale} />
+      {(["long-term", "for-you", "group", "personal"] as const).map((key) => {
+        const items = sections[key];
+        const isPersonal = key === "personal";
+        if ((!items || items.length === 0) && !isPersonal) return null;
+        const label = labels[key];
+        return (
+          <section key={key} className="mb-7">
+            <SectionHeader icon={label.icon} title={label.title} desc={label.desc} count={(items ?? []).length} />
+            {items && items.length > 0 ? (
+              <ul className="space-y-3">
+                {items.map((t) => {
+                  const isLongTerm = !!t.total_target;
+                  const count = isLongTerm ? (totalCounts[t.id] || 0) : (milestoneCounts[t.id] || 0);
+                  const target = isLongTerm ? t.total_target! : t.target_per_milestone;
+                  const doneToday = doneTodaySet.has(t.id);
+                  return (
+                    <TaskRow
+                      key={t.id}
+                      task={t}
+                      doneToday={doneToday}
+                      count={count}
+                      target={target}
+                      isLongTerm={isLongTerm}
+                      forDate={today}
+                      imageUrl={signed[t.id]}
+                      badgeText={label.badgeText}
+                      badgeClass={label.badgeClass}
+                      canDelete={key === "personal"}
+                      locale={locale}
+                    />
+                  );
+                })}
+              </ul>
+            ) : null}
+            {isPersonal && (
+              <div className={items && items.length > 0 ? "mt-3" : ""}>
+                <AddPersonalTask locale={locale} />
+              </div>
+            )}
+          </section>
+        );
+      })}
     </main>
   );
 }

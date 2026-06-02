@@ -6,7 +6,8 @@ import { LOCALES, LOCALE_LABELS, type Locale } from "@/lib/i18n";
 
 export default function LanguageSwitcher({ current }: { current: Locale }) {
   const [pending, start] = useTransition();
-  function pick(l: Locale) {
+  function onChange(e: React.ChangeEvent<HTMLSelectElement>) {
+    const l = e.target.value as Locale;
     if (l === current || pending) return;
     const fd = new FormData();
     fd.set("locale", l);
@@ -15,20 +16,15 @@ export default function LanguageSwitcher({ current }: { current: Locale }) {
     });
   }
   return (
-    <div className="flex gap-2 p-1 bg-[var(--color-background)] rounded-lg">
+    <select
+      value={current}
+      onChange={onChange}
+      disabled={pending}
+      className="w-full rounded-lg border border-[var(--color-border)] bg-[var(--color-background)] px-3 py-2.5 text-sm"
+    >
       {LOCALES.map((l) => (
-        <button
-          key={l}
-          type="button"
-          onClick={() => pick(l)}
-          disabled={pending}
-          className={`flex-1 text-center py-2 rounded-md text-sm font-medium ${
-            current === l ? "bg-[var(--color-card)]" : "text-[var(--color-foreground)]/60"
-          }`}
-        >
-          {LOCALE_LABELS[l]}
-        </button>
+        <option key={l} value={l}>{LOCALE_LABELS[l]}</option>
       ))}
-    </div>
+    </select>
   );
 }

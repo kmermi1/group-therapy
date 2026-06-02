@@ -2,6 +2,7 @@ import { requireUser } from "@/app/actions/auth";
 import { createAdminClient } from "@/lib/supabase/server";
 import { PageHeader, Card } from "@/components/ui";
 import { userResetHistoryAction } from "@/app/actions/tasks";
+import { t } from "@/lib/i18n";
 
 export default async function HistoryPage() {
   const user = await requireUser();
@@ -31,14 +32,15 @@ export default async function HistoryPage() {
     (byDate[r.completed_for_date] ||= []).push({ title: task.title, freq: task.frequency });
   }
 
+  const tr = (k: Parameters<typeof t>[0]) => t(k, user.locale);
   return (
     <main className="max-w-md mx-auto w-full px-5 py-6">
-      <PageHeader title="Your history" subtitle="Only you can see this." />
+      <PageHeader title={tr("historyTitle")} subtitle={tr("historySubtitle")} />
       <form action={userResetHistoryAction} className="mb-4">
-        <button className="text-xs text-red-500 underline">Reset my history (hide everything before now)</button>
+        <button className="text-xs text-red-500 underline">{tr("resetMyHistory")}</button>
       </form>
       {Object.keys(byDate).length === 0 ? (
-        <p className="text-sm text-[var(--color-foreground)]/60">No completions yet.</p>
+        <p className="text-sm text-[var(--color-foreground)]/60">{tr("noCompletions")}</p>
       ) : (
         <div className="space-y-3">
           {Object.entries(byDate).map(([date, items]) => (

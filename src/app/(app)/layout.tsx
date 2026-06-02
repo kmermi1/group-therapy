@@ -1,12 +1,14 @@
 import Link from "next/link";
 import { getSession } from "@/lib/session";
 import { redirect } from "next/navigation";
+import { t } from "@/lib/i18n";
 
 export default async function AppLayout({ children }: { children: React.ReactNode }) {
   const s = await getSession();
   if (!s) redirect("/login");
 
   const isAdmin = s.kind === "admin";
+  const locale = s.kind === "user" ? s.locale : "en";
 
   return (
     <div className="flex-1 flex flex-col pb-20">
@@ -18,14 +20,14 @@ export default async function AppLayout({ children }: { children: React.ReactNod
               <NavLink href="/admin" label="Status" icon="📊" />
               <NavLink href="/admin/manage" label="Tasks" icon="⚙️" />
               <NavLink href="/admin/plans" label="Plans" icon="📖" />
-              <NavLink href="/profile" label="Me" icon="👤" />
+              <NavLink href="/profile" label={t("navMe", locale)} icon="👤" />
             </>
           ) : (
             <>
-              <NavLink href="/today" label="Today" icon="✅" />
-              <NavLink href="/history" label="History" icon="📅" />
-              <NavLink href="/leaderboard" label="Group" icon="🏆" />
-              <NavLink href="/profile" label="Me" icon="👤" />
+              <NavLink href="/today" label={t("navToday", locale)} icon="✅" />
+              <NavLink href="/history" label={t("navHistory", locale)} icon="📅" />
+              <NavLink href="/leaderboard" label={t("navGroup", locale)} icon="🏆" />
+              <NavLink href="/profile" label={t("navMe", locale)} icon="👤" />
             </>
           )}
         </div>

@@ -1,10 +1,13 @@
 import JoinForm from "./JoinForm";
-import { PageHeader } from "@/components/ui";
 
 export default function JoinPage() {
+  // Join is bilingual; the page headings come from inside JoinForm based
+  // on the user's language pick.
   return (
     <main className="flex-1 max-w-md mx-auto w-full px-5 py-8">
-      <PageHeader title="Join a group" subtitle="Enter the group code your admin gave you. The app will generate a funny username for you." />
+      <header className="mb-6">
+        <h1 className="text-2xl font-bold tracking-tight">Join a group / Gruba katıl</h1>
+      </header>
       <JoinForm />
     </main>
   );

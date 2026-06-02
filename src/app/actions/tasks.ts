@@ -227,22 +227,22 @@ export async function regenerateUsernameAction(formData: FormData) {
     await sb.from("users").update({ username: newUsername }).eq("id", user.userId);
   } else {
     // fresh: archive old user, create a new user record with same PIN hash
-    const { data: oldUser } = await sb.from("users").select("pin_hash").eq("id", user.userId).single();
+    const { data: oldUser } = await sb.from("users").select("pin_hash, language").eq("id", user.userId).single();
     await sb.from("users").update({ archived_at: new Date().toISOString() }).eq("id", user.userId);
     const { data: created } = await sb
       .from("users")
-      .insert({ group_id: user.groupId, username: newUsername, pin_hash: oldUser!.pin_hash })
+      .insert({ group_id: user.groupId, username: newUsername, pin_hash: oldUser!.pin_hash, language: oldUser!.language })
       .select()
       .single();
     if (!created) throw new Error("Fresh start failed.");
     const { setSession } = await import("@/lib/session");
-    await setSession({ kind: "user", userId: created.id, groupId: user.groupId, username: created.username });
+    await setSession({ kind: "user", userId: created.id, groupId: user.groupId, username: created.username, locale: user.locale });
   }
 
   // refresh session username (for keep case)
   if (choice === "keep") {
     const { setSession } = await import("@/lib/session");
-    await setSession({ kind: "user", userId: user.userId, groupId: user.groupId, username: newUsername });
+    await setSession({ kind: "user", userId: user.userId, groupId: user.groupId, username: newUsername, locale: user.locale });
   }
   revalidatePath("/profile");
   revalidatePath("/today");

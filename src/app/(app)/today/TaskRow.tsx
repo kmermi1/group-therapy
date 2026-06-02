@@ -2,6 +2,7 @@
 
 import { toggleCompletionAction, archivePersonalTaskAction } from "@/app/actions/tasks";
 import { useState, useTransition } from "react";
+import { t, type Locale } from "@/lib/i18n";
 
 type Task = {
   id: string;
@@ -21,6 +22,7 @@ export default function TaskRow({
   badgeText,
   badgeClass,
   canDelete,
+  locale,
 }: {
   task: Task;
   doneToday: boolean;
@@ -32,7 +34,9 @@ export default function TaskRow({
   badgeText: string;
   badgeClass: string;
   canDelete?: boolean;
+  locale: Locale;
 }) {
+  const tr = (k: Parameters<typeof t>[0]) => t(k, locale);
   const [optimisticDone, setOptimisticDone] = useState(doneToday);
   const [optimisticCount, setOptimisticCount] = useState(count);
   const [pending, start] = useTransition();
@@ -93,7 +97,7 @@ export default function TaskRow({
             </span>
             {(target > 1 || isLongTerm) && (
               <span className={`text-[10px] font-mono px-1.5 py-0.5 rounded ${metTarget ? "bg-emerald-500/30 text-emerald-700 dark:text-emerald-300" : "bg-[var(--color-border)]/60"}`}>
-                {optimisticCount}/{target}{isLongTerm ? " all-time" : ""}
+                {optimisticCount}/{target}{isLongTerm ? ` ${tr("allTime")}` : ""}
               </span>
             )}
           </div>
@@ -103,16 +107,16 @@ export default function TaskRow({
           <div className="flex items-center gap-3 mt-2">
             {imageUrl && (
               <button type="button" onClick={() => setShowImage((v) => !v)} className="text-xs text-[var(--color-accent)]">
-                {showImage ? "Hide image" : "View image"}
+                {showImage ? tr("hideImage") : tr("viewImage")}
               </button>
             )}
             {canDelete && (
               <button type="button" onClick={onDelete} className="text-xs text-red-500">
-                Delete
+                {tr("delete")}
               </button>
             )}
             <span className="text-[11px] text-[var(--color-foreground)]/50 ml-auto">
-              {optimisticDone ? "Done today" : "Not done today"}
+              {optimisticDone ? tr("doneToday") : tr("notDoneToday")}
             </span>
           </div>
           {imageUrl && showImage && (

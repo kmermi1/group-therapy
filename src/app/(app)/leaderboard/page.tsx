@@ -3,6 +3,7 @@ import { createAdminClient } from "@/lib/supabase/server";
 import { getMilestoneBounds } from "@/app/actions/tasks";
 import { PageHeader, Card } from "@/components/ui";
 import Link from "next/link";
+import { t } from "@/lib/i18n";
 
 export default async function LeaderboardPage({
   searchParams,
@@ -58,22 +59,24 @@ export default async function LeaderboardPage({
     userTaskAllTime[`${c.user_id}:${c.task_id}`] = (userTaskAllTime[`${c.user_id}:${c.task_id}`] || 0) + 1;
   }
 
+  const locale = s.kind === "user" ? s.locale : "en";
+  const tr = (k: Parameters<typeof t>[0], p?: Record<string, string | number>) => t(k, locale, p);
   return (
     <main className="max-w-md mx-auto w-full px-5 py-6">
-      <PageHeader title="Group" subtitle={`Current milestone since ${milestoneStart.toLocaleDateString()}`} />
+      <PageHeader title={tr("groupTitle")} subtitle={tr("currentMilestoneSince", { date: milestoneStart.toLocaleDateString() })} />
 
       <div className="flex gap-2 mb-5 p-1 bg-[var(--color-card)] rounded-lg">
         <Link
           href="/leaderboard"
           className={`flex-1 text-center py-2 rounded-md text-sm font-medium ${view === "people" ? "bg-[var(--color-background)]" : "text-[var(--color-foreground)]/60"}`}
         >
-          By person
+          {tr("byPerson")}
         </Link>
         <Link
           href="/leaderboard?view=tasks"
           className={`flex-1 text-center py-2 rounded-md text-sm font-medium ${view === "tasks" ? "bg-[var(--color-background)]" : "text-[var(--color-foreground)]/60"}`}
         >
-          By task
+          {tr("byTask")}
         </Link>
       </div>
 

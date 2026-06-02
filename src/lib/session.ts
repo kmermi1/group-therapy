@@ -4,8 +4,10 @@ import { createHmac, timingSafeEqual } from "crypto";
 // Tiny signed-cookie session. We don't use Supabase Auth because we don't
 // want emails on file; instead we sign a JSON payload with a server secret.
 
+export type Locale = "en" | "tr";
+
 export type Session =
-  | { kind: "user"; userId: string; groupId: string; username: string }
+  | { kind: "user"; userId: string; groupId: string; username: string; locale: Locale }
   | { kind: "admin"; adminId: string; groupId: string; username: string };
 
 const COOKIE_NAME = "gt_session";

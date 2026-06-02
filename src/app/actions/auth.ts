@@ -56,11 +56,11 @@ export async function createGroupAction(formData: FormData) {
   redirect("/admin");
 }
 
-export async function previewUsernameAction(groupCode: string): Promise<{ groupId: string; username: string } | null> {
+export async function previewUsernameAction(groupCode: string, locale: "en" | "tr" = "en"): Promise<{ groupId: string; username: string } | null> {
   const sb = createAdminClient();
   const { data: group } = await sb.from("groups").select("id").eq("code", groupCode.toUpperCase()).maybeSingle();
   if (!group) return null;
-  const username = await generateUniqueUsername(group.id);
+  const username = await generateUniqueUsername(group.id, locale);
   return { groupId: group.id, username };
 }
 
@@ -68,6 +68,8 @@ export async function joinGroupAction(formData: FormData) {
   const groupCode = String(formData.get("groupCode") || "").trim().toUpperCase();
   const username = String(formData.get("username") || "").trim();
   const pin = String(formData.get("pin") || "");
+  const localeRaw = String(formData.get("locale") || "en");
+  const locale: "en" | "tr" = localeRaw === "tr" ? "tr" : "en";
 
   if (!groupCode || !username || pin.length < 4) {
     throw new Error("Group code, username, and PIN (4+ digits) required.");
@@ -77,19 +79,18 @@ export async function joinGroupAction(formData: FormData) {
   const { data: group } = await sb.from("groups").select("id").eq("code", groupCode).maybeSingle();
   if (!group) throw new Error("Group not found.");
 
-  // make sure the username is still free
   const { data: existing } = await sb.from("users").select("id").eq("group_id", group.id).eq("username", username).is("archived_at", null).maybeSingle();
   if (existing) throw new Error("Username just got taken — regenerate and try again.");
 
   const pinHash = await bcrypt.hash(pin, 10);
   const { data: user, error: userErr } = await sb
     .from("users")
-    .insert({ group_id: group.id, username, pin_hash: pinHash })
+    .insert({ group_id: group.id, username, pin_hash: pinHash, language: locale })
     .select()
     .single();
   if (userErr || !user) throw new Error(userErr?.message || "Join failed");
 
-  await setSession({ kind: "user", userId: user.id, groupId: group.id, username: user.username });
+  await setSession({ kind: "user", userId: user.id, groupId: group.id, username: user.username, locale });
   redirect("/today");
 }
 
@@ -115,8 +116,22 @@ export async function loginUserAction(formData: FormData) {
   if (!ok) throw new Error("Invalid credentials.");
 
   await sb.from("users").update({ last_seen_at: new Date().toISOString() }).eq("id", user.id);
-  await setSession({ kind: "user", userId: user.id, groupId: group.id, username: user.username });
+  const locale: "en" | "tr" = user.language === "tr" ? "tr" : "en";
+  await setSession({ kind: "user", userId: user.id, groupId: group.id, username: user.username, locale });
   redirect("/today");
+}
+
+export async function setLanguageAction(formData: FormData) {
+  const s = await getSession();
+  if (!s || s.kind !== "user") throw new Error("User only.");
+  const raw = String(formData.get("locale") || "en");
+  const locale: "en" | "tr" = raw === "tr" ? "tr" : "en";
+  const sb = createAdminClient();
+  await sb.from("users").update({ language: locale }).eq("id", s.userId);
+  await setSession({ ...s, locale });
+  const { revalidatePath } = await import("next/cache");
+  revalidatePath("/profile");
+  revalidatePath("/today");
 }
 
 export async function joinAsAdminAction(formData: FormData) {

@@ -35,6 +35,7 @@ create table users (
   pin_hash text not null,
   created_at timestamptz not null default now(),
   last_seen_at timestamptz not null default now(),
+  language text not null default 'en' check (language in ('en', 'tr')),
   -- soft-archive: when a user does a "fresh start" rename
   archived_at timestamptz,
   unique (group_id, username)

@@ -1,6 +1,7 @@
 import { createAdminClient } from "./supabase/server";
+import type { Locale } from "./session";
 
-const ADJECTIVES = [
+const ADJECTIVES_EN = [
   "Grumpy", "Sneaky", "Wobbly", "Sleepy", "Cheeky", "Fluffy", "Spicy",
   "Snazzy", "Cranky", "Bouncy", "Mighty", "Silly", "Brave", "Cosmic",
   "Mellow", "Jazzy", "Nifty", "Plucky", "Quirky", "Snappy", "Zesty",
@@ -11,7 +12,7 @@ const ADJECTIVES = [
   "Mystic",
 ];
 
-const ANIMALS = [
+const ANIMALS_EN = [
   "Penguin", "Otter", "Walrus", "Hedgehog", "Llama", "Sloth", "Capybara",
   "Narwhal", "Axolotl", "Quokka", "Pangolin", "Ferret", "Badger", "Mongoose",
   "Flamingo", "Toucan", "Platypus", "Wombat", "Tapir", "Lemur", "Okapi",
@@ -22,24 +23,42 @@ const ANIMALS = [
   "Yak",
 ];
 
+const ADJECTIVES_TR = [
+  "Sirin", "Komik", "Tatli", "Akilli", "Kivrak", "Hizli", "Yavas",
+  "Cesur", "Sevimli", "Saskin", "Mutlu", "Uzgun", "Neseli", "Sakin",
+  "Cilgin", "Hareketli", "Sessiz", "Konuskan", "Cömert", "Hirsli",
+  "Gizemli", "Romantik", "Lezzetli", "Renkli", "Parlak", "Sicak",
+  "Soguk", "Yumusak", "Sert", "Yepyeni", "Eski", "Modern", "Sik",
+  "Seffaf", "Karanlik", "Aydinlik", "Bulanik", "Berrak", "Gevrek",
+  "Sevecen", "Anlayisli", "Coskulu", "Vakur", "Gorkemli", "Mahcup",
+  "Naif", "Mutevazi", "Aceleci", "Tembel", "Calikan",
+];
+
+const ANIMALS_TR = [
+  "Kedi", "Kopek", "Aslan", "Kaplan", "Fil", "Zurafa", "Tavsan",
+  "Sincap", "Kirpi", "Penguen", "Baykus", "Kartal", "Sahin", "Karga",
+  "Serce", "Bulbul", "Papagan", "Kelebek", "Ari", "Karinca",
+  "Yengec", "Yunus", "Balina", "Kopekbaligi", "Ahtapot", "Kaplumbaga",
+  "Yilan", "Timsah", "Maymun", "Goril", "Panda", "Koala", "Kanguru",
+  "Tilki", "Kurt", "Geyik", "Boga", "Inek", "At", "Esek",
+  "Domuz", "Koyun", "Keci", "Tavuk", "Ordek", "Kugu", "Devekusu",
+  "Flamingo", "Marti", "Sakal",
+];
+
 function pick<T>(arr: T[]): T {
   return arr[Math.floor(Math.random() * arr.length)];
 }
 
-export function generateUsername(): string {
-  const num = Math.floor(Math.random() * 100); // 0-99
-  return `${pick(ADJECTIVES)}${pick(ANIMALS)}${num}`;
+export function generateUsername(locale: Locale = "en"): string {
+  const num = Math.floor(Math.random() * 100);
+  const [adjs, anims] = locale === "tr" ? [ADJECTIVES_TR, ANIMALS_TR] : [ADJECTIVES_EN, ANIMALS_EN];
+  return `${pick(adjs)}${pick(anims)}${num}`;
 }
 
-/**
- * Generate a username that doesn't collide with any active user in the
- * group. Retries up to a reasonable cap; if all attempts collide (very
- * unlikely with ~50*50*100 combinations) falls back to a timestamp suffix.
- */
-export async function generateUniqueUsername(groupId: string): Promise<string> {
+export async function generateUniqueUsername(groupId: string, locale: Locale = "en"): Promise<string> {
   const sb = createAdminClient();
   for (let i = 0; i < 20; i++) {
-    const candidate = generateUsername();
+    const candidate = generateUsername(locale);
     const { data } = await sb
       .from("users")
       .select("id")
@@ -49,5 +68,5 @@ export async function generateUniqueUsername(groupId: string): Promise<string> {
       .maybeSingle();
     if (!data) return candidate;
   }
-  return `${generateUsername()}${Date.now().toString(36).slice(-4)}`;
+  return `${generateUsername(locale)}${Date.now().toString(36).slice(-4)}`;
 }

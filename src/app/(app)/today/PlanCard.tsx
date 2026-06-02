@@ -3,6 +3,7 @@
 import { useState, useTransition } from "react";
 import Link from "next/link";
 import { togglePlanDayDoneAction } from "@/app/actions/plans";
+import { t, type Locale } from "@/lib/i18n";
 
 export type PlanCardProps = {
   planId: string;
@@ -12,12 +13,14 @@ export type PlanCardProps = {
   todayPlanDay: number;
   totalDays: number | null;
   todayLabel: string | null;
-  todayRanges: string | null;             // formatted "1–5, 7–9", null if user has no allocation today
+  todayRanges: string | null;
   doneToday: boolean;
   outstandingDays: { planDay: number; label: string | null; ranges: string; done: boolean }[];
+  locale: Locale;
 };
 
 export default function PlanCard(props: PlanCardProps) {
+  const tr = (k: Parameters<typeof t>[0], p?: Record<string, string | number>) => t(k, props.locale, p);
   const [pending, start] = useTransition();
   const [optimisticToday, setOptimisticToday] = useState(props.doneToday);
   const [optimisticOutstanding, setOptimisticOutstanding] = useState(props.outstandingDays);
@@ -63,11 +66,11 @@ export default function PlanCard(props: PlanCardProps) {
               {props.planName}
             </Link>
             <span className="text-[10px] uppercase tracking-wide px-1.5 py-0.5 rounded bg-purple-500/20 text-purple-700 dark:text-purple-300">
-              {props.schedule === "progressing" ? "Plan" : "Daily"}
+              {props.schedule === "progressing" ? tr("planLabel") : tr("dailyLabel")}
             </span>
             {props.schedule === "progressing" && (
               <span className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-[var(--color-border)]/60">
-                Day {props.todayPlanDay}/{props.totalDays}
+                {tr("dayOf", { n: props.todayPlanDay, total: String(props.totalDays ?? "?") })}
               </span>
             )}
           </div>
@@ -78,11 +81,13 @@ export default function PlanCard(props: PlanCardProps) {
 
           {props.todayRanges ? (
             <div className="text-sm text-[var(--color-foreground)]/80 mt-0.5">
-              Your {props.unitLabel}s: <span className="font-semibold">{props.todayRanges}</span>
+              {tr("yourUnitsToday", { unit: props.unitLabel })} <span className="font-semibold">{props.todayRanges}</span>
             </div>
           ) : (
             <div className="text-sm text-[var(--color-foreground)]/60 mt-0.5">
-              You haven&apos;t picked your {props.unitLabel}s — <Link href={`/plans/${props.planId}`} className="underline">claim some</Link>.
+              <Link href={`/plans/${props.planId}`} className="underline">
+                {tr("pickRangePrompt", { unit: props.unitLabel })}
+              </Link>
             </div>
           )}
 
@@ -91,7 +96,7 @@ export default function PlanCard(props: PlanCardProps) {
               onClick={() => setExpanded((v) => !v)}
               className="mt-2 inline-flex items-center gap-1 text-xs px-2 py-1 rounded-full bg-amber-500/15 text-amber-700 dark:text-amber-300"
             >
-              📥 {outstandingCount} to catch up {expanded ? "▴" : "▾"}
+              📥 {outstandingCount} {tr("toCatchUp")} {expanded ? "▴" : "▾"}
             </button>
           )}
 

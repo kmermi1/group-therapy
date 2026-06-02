@@ -7,6 +7,7 @@ import TaskRow from "./TaskRow";
 import AddPersonalTask from "./AddPersonalTask";
 import PlanCard from "./PlanCard";
 import { todayPlanDay, dayLabel, rangesActiveOnDay, formatRanges, isWithinSchedule } from "@/lib/plans";
+import { t } from "@/lib/i18n";
 
 const BUCKET = "task-images";
 
@@ -54,11 +55,14 @@ export default async function TodayPage() {
     }
   }
 
+  const locale = user.locale;
+  const tr = (k: Parameters<typeof t>[0], p?: Record<string, string | number>) => t(k, locale, p);
+
   type TaskT = NonNullable<typeof tasks>[number];
-  const categorize = (t: TaskT) => {
-    if (t.total_target) return "long-term";
-    if (t.created_by_user_id === user.userId) return "personal";
-    if (t.assignee_user_id === user.userId) return "for-you";
+  const categorize = (task: TaskT) => {
+    if (task.total_target) return "long-term";
+    if (task.created_by_user_id === user.userId) return "personal";
+    if (task.assignee_user_id === user.userId) return "for-you";
     return "group";
   };
 
@@ -68,13 +72,13 @@ export default async function TodayPage() {
     group: [],
     personal: [],
   };
-  for (const t of tasks ?? []) sections[categorize(t)]!.push(t);
+  for (const task of tasks ?? []) sections[categorize(task)]!.push(task);
 
   const labels: Record<string, { title: string; badgeText: string; badgeClass: string }> = {
-    "long-term": { title: "Long-term goals", badgeText: "Long-term", badgeClass: "bg-purple-500/20 text-purple-700 dark:text-purple-300" },
-    "for-you": { title: "Assigned to you", badgeText: "For you", badgeClass: "bg-amber-500/20 text-amber-700 dark:text-amber-300" },
-    group: { title: "Group tasks", badgeText: "Group", badgeClass: "bg-sky-500/20 text-sky-700 dark:text-sky-300" },
-    personal: { title: "Your own tasks", badgeText: "Personal", badgeClass: "bg-emerald-500/20 text-emerald-700 dark:text-emerald-300" },
+    "long-term": { title: tr("sectionLongTerm"), badgeText: tr("badgeLongTerm"), badgeClass: "bg-purple-500/20 text-purple-700 dark:text-purple-300" },
+    "for-you": { title: tr("sectionAssignedToYou"), badgeText: tr("badgeForYou"), badgeClass: "bg-amber-500/20 text-amber-700 dark:text-amber-300" },
+    group: { title: tr("sectionGroupTasks"), badgeText: tr("badgeGroup"), badgeClass: "bg-sky-500/20 text-sky-700 dark:text-sky-300" },
+    personal: { title: tr("sectionPersonal"), badgeText: tr("badgePersonal"), badgeClass: "bg-emerald-500/20 text-emerald-700 dark:text-emerald-300" },
   };
 
   // ---- Reading plans ----
@@ -143,19 +147,19 @@ export default async function TodayPage() {
 
   return (
     <main className="max-w-md mx-auto w-full px-5 py-6">
-      <PageHeader title="Today" subtitle={`Logged in as ${user.username}`} />
+      <PageHeader title={tr("todayTitle")} subtitle={tr("todaySubtitleLoggedInAs", { name: user.username })} />
 
       {planCards.length > 0 && (
         <section className="mb-6">
-          <h2 className="text-xs uppercase tracking-wide text-[var(--color-foreground)]/60 mb-2">Reading plans</h2>
+          <h2 className="text-xs uppercase tracking-wide text-[var(--color-foreground)]/60 mb-2">{tr("sectionReadingPlans")}</h2>
           <ul className="space-y-3">
-            {planCards.map((p) => <PlanCard key={p.planId} {...p} />)}
+            {planCards.map((p) => <PlanCard key={p.planId} {...p} locale={locale} />)}
           </ul>
         </section>
       )}
 
       {(tasks ?? []).length === 0 && planCards.length === 0 ? (
-        <p className="text-sm text-[var(--color-foreground)]/60 mb-6">No tasks yet. Add a personal one below, or hang tight for the admin.</p>
+        <p className="text-sm text-[var(--color-foreground)]/60 mb-6">{tr("noTasksYet")}</p>
       ) : (tasks ?? []).length === 0 ? null : (
         <div className="space-y-6 mb-6">
           {(["long-term", "for-you", "group", "personal"] as const).map((key) => {
@@ -184,6 +188,7 @@ export default async function TodayPage() {
                         badgeText={label.badgeText}
                         badgeClass={label.badgeClass}
                         canDelete={key === "personal"}
+                        locale={locale}
                       />
                     );
                   })}
@@ -194,7 +199,7 @@ export default async function TodayPage() {
         </div>
       )}
 
-      <AddPersonalTask />
+      <AddPersonalTask locale={locale} />
     </main>
   );
 }

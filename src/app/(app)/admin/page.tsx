@@ -76,7 +76,7 @@ export default async function AdminDashboardPage() {
             message="Rotate the group code? Existing members must re-enter the new code next time they log in. Tasks and history are kept."
             className="text-xs text-red-500 underline"
           >
-            Rotate code
+            Rotate code (invalidate old)
           </ConfirmButton>
         </form>
       </Card>

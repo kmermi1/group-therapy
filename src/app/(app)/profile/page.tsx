@@ -14,27 +14,30 @@ export default async function ProfilePage() {
   const { data: group } = await sb.from("groups").select("code, name").eq("id", s.groupId).single();
 
   return (
-    <main className="max-w-md mx-auto w-full px-5 py-6">
+    <main className="max-w-md mx-auto w-full px-5 py-7 reveal">
       <PageHeader title={tr("meTitle")} />
       <Card className="mb-4">
-        <div className="text-xs uppercase tracking-wide text-[var(--color-foreground)]/60">{tr("youAre")}</div>
+        <div className="text-[10px] uppercase tracking-[0.18em] text-[var(--foreground-mute)] mb-1">{tr("youAre")}</div>
         {s.kind === "user" ? (
           <ProfileRename currentUsername={s.username} locale={locale} />
         ) : (
-          <div className="text-xl font-bold mt-1">{s.username}</div>
+          <div className="display text-[24px] tracking-tight mt-1">{s.username}</div>
         )}
-        <div className="text-xs text-[var(--color-foreground)]/60 mt-3">
-          {tr("groupLine", { code: group?.code ?? "", name: group?.name ?? "" })}
+        <div className="rule mt-4 mb-3" />
+        <div className="text-[12px] text-[var(--foreground-mute)] flex items-center gap-2">
+          <span className="numeric tracking-wider">{group?.code}</span>
+          <span className="text-[var(--rule)]">·</span>
+          <span className="italic">{group?.name}</span>
         </div>
-        <div className="text-[11px] text-[var(--color-foreground)]/50 mt-1">
+        <div className="text-[10px] tracking-[0.12em] uppercase text-[var(--foreground-mute)] mt-1">
           {tr("loggedInAs", { kind: s.kind === "admin" ? tr("loggedInAsAdmin") : tr("loggedInAsUser") })}
         </div>
       </Card>
 
       {s.kind === "user" && (
         <Card className="mb-4">
-          <h2 className="font-semibold mb-1">{tr("languageSetting")}</h2>
-          <p className="text-[11px] text-[var(--color-foreground)]/60 mb-3">{tr("languageHint")}</p>
+          <h2 className="display text-[18px] tracking-tight mb-1">{tr("languageSetting")}</h2>
+          <p className="text-[11px] text-[var(--foreground-mute)] italic mb-3">{tr("languageHint")}</p>
           <LanguageSwitcher current={locale} />
         </Card>
       )}

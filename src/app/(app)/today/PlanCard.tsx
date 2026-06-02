@@ -46,46 +46,49 @@ export default function PlanCard(props: PlanCardProps) {
   const outstandingCount = optimisticOutstanding.filter((d) => !d.done).length;
 
   return (
-    <li className="rounded-xl border border-[var(--color-border)] bg-[var(--color-card)] p-4">
+    <li
+      className="rounded-2xl border border-[var(--border)] bg-[var(--card)] p-4"
+      style={{ boxShadow: "var(--shadow-paper)" }}
+    >
       <div className="flex items-start gap-3">
         <button
           onClick={() => toggle(props.todayPlanDay, optimisticToday)}
           disabled={pending || !props.todayRanges}
           aria-label={optimisticToday ? "Unmark today" : "Mark done today"}
-          className={`mt-0.5 h-7 w-7 rounded-md border-2 flex items-center justify-center transition shrink-0 ${
+          className={`mt-0.5 h-8 w-8 rounded-full border flex items-center justify-center transition shrink-0 ${
             optimisticToday
-              ? "bg-[var(--color-accent)] border-[var(--color-accent)] text-[var(--color-accent-fg)]"
-              : "border-[var(--color-border)]"
+              ? "bg-[var(--accent)] border-[var(--accent)] text-[var(--accent-fg)] shadow-[0_2px_8px_-3px_rgba(45,106,79,0.55)]"
+              : "border-[var(--border)] bg-[var(--paper-deep)]"
           } ${!props.todayRanges ? "opacity-40" : ""}`}
         >
-          {optimisticToday ? "✓" : ""}
+          {optimisticToday ? <span className="text-[14px] leading-none">✓</span> : null}
         </button>
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2 flex-wrap">
-            <Link href={`/plans/${props.planId}`} className="font-semibold hover:underline">
+            <Link href={`/plans/${props.planId}`} className="display text-[16px] tracking-tight hover:underline underline-offset-2">
               {props.planName}
             </Link>
-            <span className="text-[10px] uppercase tracking-wide px-1.5 py-0.5 rounded bg-purple-500/20 text-purple-700 dark:text-purple-300">
+            <span className="text-[9px] uppercase tracking-[0.14em] px-2 py-0.5 rounded-full bg-[var(--gold-soft)] text-[var(--gold)]">
               {props.schedule === "progressing" ? tr("planLabel") : tr("dailyLabel")}
             </span>
             {props.schedule === "progressing" && (
-              <span className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-[var(--color-border)]/60">
+              <span className="text-[10px] numeric px-2 py-0.5 rounded-full bg-[var(--paper-deep)] text-[var(--foreground-mute)]">
                 {tr("dayOf", { n: props.todayPlanDay, total: String(props.totalDays ?? "?") })}
               </span>
             )}
           </div>
 
           {props.todayLabel && (
-            <div className="text-sm mt-1">{props.todayLabel}</div>
+            <div className="display italic text-[14px] mt-1 text-[var(--accent)]">{props.todayLabel}</div>
           )}
 
           {props.todayRanges ? (
-            <div className="text-sm text-[var(--color-foreground)]/80 mt-0.5">
-              {tr("yourUnitsToday", { unit: props.unitLabel })} <span className="font-semibold">{props.todayRanges}</span>
+            <div className="text-[13px] text-[var(--foreground-mute)] mt-0.5">
+              {tr("yourUnitsToday", { unit: props.unitLabel })} <span className="numeric text-[var(--foreground)]">{props.todayRanges}</span>
             </div>
           ) : (
-            <div className="text-sm text-[var(--color-foreground)]/60 mt-0.5">
-              <Link href={`/plans/${props.planId}`} className="underline">
+            <div className="text-[13px] text-[var(--foreground-mute)] mt-0.5 italic">
+              <Link href={`/plans/${props.planId}`} className="underline underline-offset-2">
                 {tr("pickRangePrompt", { unit: props.unitLabel })}
               </Link>
             </div>
@@ -94,9 +97,9 @@ export default function PlanCard(props: PlanCardProps) {
           {outstandingCount > 0 && (
             <button
               onClick={() => setExpanded((v) => !v)}
-              className="mt-2 inline-flex items-center gap-1 text-xs px-2 py-1 rounded-full bg-amber-500/15 text-amber-700 dark:text-amber-300"
+              className="mt-2 inline-flex items-center gap-1.5 text-[11px] px-2.5 py-1 rounded-full bg-[var(--gold-soft)] text-[var(--gold)]"
             >
-              📥 {outstandingCount} {tr("toCatchUp")} {expanded ? "▴" : "▾"}
+              <span className="numeric">{outstandingCount}</span> {tr("toCatchUp")} {expanded ? "▴" : "▾"}
             </button>
           )}
 

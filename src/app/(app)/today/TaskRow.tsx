@@ -70,58 +70,60 @@ export default function TaskRow({
   }
 
   return (
-    <li className="rounded-xl border border-[var(--color-border)] bg-[var(--color-card)] p-4">
+    <li
+      className="rounded-2xl border border-[var(--border)] bg-[var(--card)] p-4"
+      style={{ boxShadow: "var(--shadow-paper)" }}
+    >
       <div className="flex items-start gap-3">
         <button
           onClick={onToggle}
           disabled={pending}
           aria-label={optimisticDone ? "Unmark today" : "Mark done today"}
-          className={`mt-0.5 h-7 w-7 rounded-md border-2 flex items-center justify-center transition ${
+          className={`mt-0.5 h-8 w-8 rounded-full border flex items-center justify-center transition shrink-0 ${
             optimisticDone
-              ? "bg-[var(--color-accent)] border-[var(--color-accent)] text-[var(--color-accent-fg)]"
-              : "border-[var(--color-border)]"
+              ? "bg-[var(--accent)] border-[var(--accent)] text-[var(--accent-fg)] shadow-[0_2px_8px_-3px_rgba(45,106,79,0.55)]"
+              : "border-[var(--border)] bg-[var(--paper-deep)]"
           }`}
         >
-          {optimisticDone ? "✓" : ""}
+          {optimisticDone ? <span className="text-[14px] leading-none">✓</span> : null}
         </button>
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2 flex-wrap">
-            <h3 className={`font-semibold ${metTarget ? "line-through opacity-60" : ""}`}>
+            <h3 className={`display text-[16px] tracking-tight ${metTarget ? "line-through opacity-60" : ""}`}>
               {task.title}
             </h3>
-            <span className={`text-[10px] uppercase tracking-wide px-1.5 py-0.5 rounded ${badgeClass}`}>
+            <span className={`text-[9px] uppercase tracking-[0.14em] px-2 py-0.5 rounded-full ${badgeClass}`}>
               {badgeText}
             </span>
-            <span className="text-[10px] uppercase tracking-wide px-1.5 py-0.5 rounded bg-[var(--color-border)]/60">
-              {task.frequency}
-            </span>
             {(target > 1 || isLongTerm) && (
-              <span className={`text-[10px] font-mono px-1.5 py-0.5 rounded ${metTarget ? "bg-emerald-500/30 text-emerald-700 dark:text-emerald-300" : "bg-[var(--color-border)]/60"}`}>
-                {optimisticCount}/{target}{isLongTerm ? ` ${tr("allTime")}` : ""}
+              <span className={`text-[10px] numeric px-2 py-0.5 rounded-full ${metTarget ? "bg-[var(--accent-soft)] text-[var(--accent)]" : "bg-[var(--paper-deep)] text-[var(--foreground-mute)]"}`}>
+                {optimisticCount}/{target}{isLongTerm ? ` · ${tr("allTime")}` : ""}
               </span>
             )}
           </div>
           {task.description && (
-            <p className="text-sm text-[var(--color-foreground)]/70 mt-1">{task.description}</p>
+            <p className="text-[13px] text-[var(--foreground-mute)] mt-1 leading-relaxed italic">
+              {task.description}
+            </p>
           )}
-          <div className="flex items-center gap-3 mt-2">
+          <div className="flex items-center gap-3 mt-2.5">
             {imageUrl && (
-              <button type="button" onClick={() => setShowImage((v) => !v)} className="text-xs text-[var(--color-accent)]">
+              <button type="button" onClick={() => setShowImage((v) => !v)} className="text-[11px] text-[var(--accent)] underline-offset-2 hover:underline">
                 {showImage ? tr("hideImage") : tr("viewImage")}
               </button>
             )}
             {canDelete && (
-              <button type="button" onClick={onDelete} className="text-xs text-red-500">
+              <button type="button" onClick={onDelete} className="text-[11px] text-[#a8412e] underline-offset-2 hover:underline">
                 {tr("delete")}
               </button>
             )}
-            <span className="text-[11px] text-[var(--color-foreground)]/50 ml-auto">
+            <span className="text-[10px] text-[var(--foreground-mute)] ml-auto tracking-[0.08em] uppercase">
               {optimisticDone ? tr("doneToday") : tr("notDoneToday")}
             </span>
           </div>
           {imageUrl && showImage && (
             // eslint-disable-next-line @next/next/no-img-element
-            <img src={imageUrl} alt={task.title} className="mt-2 w-full rounded-lg" />
+            <img src={imageUrl} alt={task.title} className="mt-2 w-full rounded-xl border border-[var(--border)]" />
           )}
         </div>
       </div>

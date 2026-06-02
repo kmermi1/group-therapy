@@ -88,10 +88,10 @@ export default async function TodayPage() {
   for (const task of tasks ?? []) sections[categorize(task)]!.push(task);
 
   const labels: Record<string, { title: string; desc: string; icon: string; badgeText: string; badgeClass: string }> = {
-    "long-term": { title: tr("sectionLongTerm"), desc: tr("sectionLongTermDesc"), icon: "🎯", badgeText: tr("badgeLongTerm"), badgeClass: "bg-purple-500/20 text-purple-700 dark:text-purple-300" },
-    "for-you": { title: tr("sectionAssignedToYou"), desc: tr("sectionAssignedToYouDesc"), icon: "📌", badgeText: tr("badgeForYou"), badgeClass: "bg-amber-500/20 text-amber-700 dark:text-amber-300" },
-    group: { title: tr("sectionGroupTasks"), desc: tr("sectionGroupTasksDesc"), icon: "🌍", badgeText: tr("badgeGroup"), badgeClass: "bg-sky-500/20 text-sky-700 dark:text-sky-300" },
-    personal: { title: tr("sectionPersonal"), desc: tr("sectionPersonalDesc"), icon: "🪴", badgeText: tr("badgePersonal"), badgeClass: "bg-emerald-500/20 text-emerald-700 dark:text-emerald-300" },
+    "long-term": { title: tr("sectionLongTerm"), desc: tr("sectionLongTermDesc"), icon: "✦", badgeText: tr("badgeLongTerm"), badgeClass: "bg-[var(--gold-soft)] text-[var(--gold)]" },
+    "for-you": { title: tr("sectionAssignedToYou"), desc: tr("sectionAssignedToYouDesc"), icon: "❉", badgeText: tr("badgeForYou"), badgeClass: "bg-[#f3e3d8] text-[var(--warm)] dark:bg-[#3a2418] dark:text-[var(--warm)]" },
+    group: { title: tr("sectionGroupTasks"), desc: tr("sectionGroupTasksDesc"), icon: "❡", badgeText: tr("badgeGroup"), badgeClass: "bg-[var(--accent-soft)] text-[var(--accent)]" },
+    personal: { title: tr("sectionPersonal"), desc: tr("sectionPersonalDesc"), icon: "◇", badgeText: tr("badgePersonal"), badgeClass: "bg-[#efe7da] text-[var(--foreground-mute)] dark:bg-[#252a32] dark:text-[var(--foreground-mute)]" },
   };
 
   // ---- Reading plans ----
@@ -159,7 +159,7 @@ export default async function TodayPage() {
   }
 
   return (
-    <main className="max-w-md mx-auto w-full px-5 py-6">
+    <main className="max-w-md mx-auto w-full px-5 py-7 reveal">
       <PageHeader title={tr("todayTitle")} subtitle={tr("todaySubtitleLoggedInAs", { name: user.username })} />
 
       {planCards.length > 0 && (

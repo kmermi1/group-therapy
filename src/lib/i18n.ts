@@ -58,7 +58,7 @@ const en = {
   navToday: "Today",
   navHistory: "History",
   navGroup: "Group",
-  navMe: "Me",
+  navMe: "Profile",
 
   // Today
   todayTitle: "Today",
@@ -109,7 +109,7 @@ const en = {
   noOneAssigned: "No one assigned.",
 
   // Profile
-  meTitle: "Me",
+  meTitle: "Profile",
   youAre: "You are",
   groupLine: "Group {code} · {name}",
   loggedInAs: "Logged in as: {kind}",
@@ -190,7 +190,7 @@ const tr: Partial<typeof en> = {
   navToday: "Bugün",
   navHistory: "Geçmiş",
   navGroup: "Grup",
-  navMe: "Ben",
+  navMe: "Profil",
 
   todayTitle: "Bugün",
   todaySubtitleLoggedInAs: "{name} olarak giriş yaptın",
@@ -237,7 +237,7 @@ const tr: Partial<typeof en> = {
   noTasksYetGroup: "Henüz görev yok.",
   noOneAssigned: "Atanmış kimse yok.",
 
-  meTitle: "Ben",
+  meTitle: "Profil",
   youAre: "Sen",
   groupLine: "Grup {code} · {name}",
   loggedInAs: "Giriş türü: {kind}",

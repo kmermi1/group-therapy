@@ -1,0 +1,114 @@
+import { requireAdmin, rotateAdminInviteAction } from "@/app/actions/auth";
+import { createAdminClient } from "@/lib/supabase/server";
+import { getMilestoneBounds, removeUserAction, rotateGroupCodeAction } from "@/app/actions/tasks";
+import { PageHeader, Card } from "@/components/ui";
+import ConfirmButton from "@/components/ConfirmButton";
+
+function formatRelative(iso: string | null): string {
+  if (!iso) return "never";
+  const then = new Date(iso).getTime();
+  const diff = Date.now() - then;
+  const m = Math.floor(diff / 60000);
+  if (m < 1) return "just now";
+  if (m < 60) return `${m}m ago`;
+  const h = Math.floor(m / 60);
+  if (h < 24) return `${h}h ago`;
+  const d = Math.floor(h / 24);
+  return `${d}d ago`;
+}
+
+export default async function AdminDashboardPage() {
+  const admin = await requireAdmin();
+  const sb = createAdminClient();
+  const { milestoneStart, group } = await getMilestoneBounds(admin.groupId);
+  const startStr = milestoneStart.toISOString().slice(0, 10);
+
+  const { data: users } = await sb
+    .from("users")
+    .select("id, username, last_seen_at")
+    .eq("group_id", admin.groupId)
+    .is("archived_at", null);
+
+  const { data: tasks } = await sb
+    .from("tasks")
+    .select("id, title, frequency, assignee_user_id, target_per_milestone")
+    .eq("group_id", admin.groupId)
+    .is("archived_at", null)
+    .is("created_by_user_id", null);
+
+  const { data: comps } = await sb
+    .from("task_completions")
+    .select("user_id, task_id, completed_for_date, tasks!inner(group_id, created_by_user_id)")
+    .gte("completed_for_date", startStr)
+    .eq("tasks.group_id", admin.groupId)
+    .is("tasks.created_by_user_id", null);
+
+  // count completions per (user, task) in this milestone
+  const userTaskCount: Record<string, number> = {};
+  for (const c of comps ?? []) {
+    const k = `${c.user_id}:${c.task_id}`;
+    userTaskCount[k] = (userTaskCount[k] || 0) + 1;
+  }
+
+  return (
+    <main className="max-w-md mx-auto w-full px-5 py-6">
+      <PageHeader title="Admin dashboard" subtitle={`Group ${group.code} · milestone since ${milestoneStart.toLocaleDateString()}`} />
+      <Card className="mb-4">
+        <div className="text-xs uppercase tracking-wide text-[var(--color-foreground)]/60">Group code (for members)</div>
+        <div className="text-2xl font-mono font-bold mt-1">{group.code}</div>
+        <p className="text-xs text-[var(--color-foreground)]/60 mt-1">Share with friends so they can join as members.</p>
+        <form action={rotateGroupCodeAction} className="mt-3">
+          <ConfirmButton
+            message="Rotate the group code? Existing members must re-enter the new code next time they log in. Tasks and history are kept."
+            className="text-xs text-red-500 underline"
+          >
+            Rotate code
+          </ConfirmButton>
+        </form>
+      </Card>
+
+      <Card className="mb-4">
+        <div className="text-xs uppercase tracking-wide text-[var(--color-foreground)]/60">Admin invite code</div>
+        <div className="text-2xl font-mono font-bold mt-1">{group.admin_invite_code}</div>
+        <p className="text-xs text-[var(--color-foreground)]/60 mt-1">
+          Share <strong>only</strong> with people you want to make co-admins. They sign up at <code>/admin-join</code>.
+        </p>
+        <form action={rotateAdminInviteAction} className="mt-3">
+          <button className="text-xs text-red-500 underline">Rotate code (invalidate old)</button>
+        </form>
+      </Card>
+
+      <h2 className="text-sm font-semibold mb-2 text-[var(--color-foreground)]/70">Members ({users?.length ?? 0})</h2>
+      <div className="space-y-2 mb-6">
+        {(users ?? []).map((u) => {
+          const userTasks = (tasks ?? []).filter((t) => t.assignee_user_id === null || t.assignee_user_id === u.id);
+          const total = userTasks.length;
+          const done = userTasks.filter((t) => (userTaskCount[`${u.id}:${t.id}`] || 0) >= t.target_per_milestone).length;
+          return (
+            <Card key={u.id} className="flex items-center justify-between gap-2">
+              <div className="min-w-0 flex-1">
+                <div className="font-medium truncate">{u.username}</div>
+                <div className="text-[11px] text-[var(--color-foreground)]/50">
+                  last seen {formatRelative(u.last_seen_at)}
+                </div>
+              </div>
+              <span className="text-sm font-mono">{done}/{total}</span>
+              <form action={removeUserAction}>
+                <input type="hidden" name="userId" value={u.id} />
+                <ConfirmButton
+                  message={`Remove ${u.username} from the group? Their completions and personal task assignments are deleted.`}
+                  className="text-xs text-red-500 underline"
+                >
+                  Remove
+                </ConfirmButton>
+              </form>
+            </Card>
+          );
+        })}
+        {(users ?? []).length === 0 && (
+          <p className="text-sm text-[var(--color-foreground)]/60">No one has joined yet.</p>
+        )}
+      </div>
+    </main>
+  );
+}

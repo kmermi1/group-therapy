@@ -63,6 +63,7 @@ create table tasks (
   image_path text, -- supabase storage path
   frequency task_frequency not null,
   target_per_milestone smallint not null default 1 check (target_per_milestone >= 1),
+  total_target integer check (total_target is null or total_target >= 1),
   -- null = assigned to everyone in the group
   assignee_user_id uuid references users(id) on delete cascade,
   -- null = created by an admin; set for self-created personal tasks

@@ -31,11 +31,12 @@ export default async function AdminDashboardPage() {
 
   const { data: tasks } = await sb
     .from("tasks")
-    .select("id, title, frequency, assignee_user_id, target_per_milestone")
+    .select("id, title, frequency, assignee_user_id, target_per_milestone, total_target")
     .eq("group_id", admin.groupId)
     .is("archived_at", null)
     .is("created_by_user_id", null);
 
+  // milestone completions (for normal tasks)
   const { data: comps } = await sb
     .from("task_completions")
     .select("user_id, task_id, completed_for_date, tasks!inner(group_id, created_by_user_id)")
@@ -43,11 +44,24 @@ export default async function AdminDashboardPage() {
     .eq("tasks.group_id", admin.groupId)
     .is("tasks.created_by_user_id", null);
 
-  // count completions per (user, task) in this milestone
+  // all-time completions (for long-term tasks)
+  const longTermIds = (tasks ?? []).filter((t) => t.total_target).map((t) => t.id);
+  const { data: allTimeComps } = longTermIds.length
+    ? await sb
+        .from("task_completions")
+        .select("user_id, task_id")
+        .in("task_id", longTermIds)
+    : { data: [] as { user_id: string; task_id: string }[] };
+
   const userTaskCount: Record<string, number> = {};
   for (const c of comps ?? []) {
     const k = `${c.user_id}:${c.task_id}`;
     userTaskCount[k] = (userTaskCount[k] || 0) + 1;
+  }
+  const userTaskAllTime: Record<string, number> = {};
+  for (const c of allTimeComps ?? []) {
+    const k = `${c.user_id}:${c.task_id}`;
+    userTaskAllTime[k] = (userTaskAllTime[k] || 0) + 1;
   }
 
   return (
@@ -83,7 +97,10 @@ export default async function AdminDashboardPage() {
         {(users ?? []).map((u) => {
           const userTasks = (tasks ?? []).filter((t) => t.assignee_user_id === null || t.assignee_user_id === u.id);
           const total = userTasks.length;
-          const done = userTasks.filter((t) => (userTaskCount[`${u.id}:${t.id}`] || 0) >= t.target_per_milestone).length;
+          const done = userTasks.filter((t) => {
+            if (t.total_target) return (userTaskAllTime[`${u.id}:${t.id}`] || 0) >= t.total_target;
+            return (userTaskCount[`${u.id}:${t.id}`] || 0) >= t.target_per_milestone;
+          }).length;
           return (
             <Card key={u.id} className="flex items-center justify-between gap-2">
               <div className="min-w-0 flex-1">

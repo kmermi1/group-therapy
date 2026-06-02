@@ -13,6 +13,8 @@ export async function createTaskAction(formData: FormData) {
   const description = String(formData.get("description") || "").trim() || null;
   const frequency = String(formData.get("frequency") || "daily") as "daily" | "weekly";
   const target = Math.max(1, Number(formData.get("target") || 1));
+  const totalRaw = String(formData.get("totalTarget") || "").trim();
+  const totalTarget = totalRaw === "" ? null : Math.max(1, Number(totalRaw));
   const assigneeRaw = String(formData.get("assigneeUserId") || "");
   const assigneeUserId = assigneeRaw === "all" || assigneeRaw === "" ? null : assigneeRaw;
   const image = formData.get("image") as File | null;
@@ -40,6 +42,7 @@ export async function createTaskAction(formData: FormData) {
     image_path,
     frequency,
     target_per_milestone: target,
+    total_target: totalTarget,
     assignee_user_id: assigneeUserId,
   });
   if (error) throw new Error(error.message);

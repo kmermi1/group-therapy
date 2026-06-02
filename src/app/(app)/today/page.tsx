@@ -24,20 +24,23 @@ export default async function TodayPage() {
 
   const ids = (tasks ?? []).map((t) => t.id);
   const milestoneStartStr = milestoneStart.toISOString().slice(0, 10);
+  // Pull ALL completions for these tasks (need all-time counts for long-term goals)
   const { data: completions } = ids.length
     ? await sb
         .from("task_completions")
         .select("task_id, completed_for_date")
         .eq("user_id", user.userId)
         .in("task_id", ids)
-        .gte("completed_for_date", milestoneStartStr)
     : { data: [] as { task_id: string; completed_for_date: string }[] };
 
-  // count completions per task this milestone + track which tasks are done "today"
   const milestoneCounts: Record<string, number> = {};
+  const totalCounts: Record<string, number> = {};
   const doneTodaySet = new Set<string>();
   for (const c of completions ?? []) {
-    milestoneCounts[c.task_id] = (milestoneCounts[c.task_id] || 0) + 1;
+    totalCounts[c.task_id] = (totalCounts[c.task_id] || 0) + 1;
+    if (c.completed_for_date >= milestoneStartStr) {
+      milestoneCounts[c.task_id] = (milestoneCounts[c.task_id] || 0) + 1;
+    }
     if (c.completed_for_date === today) doneTodaySet.add(c.task_id);
   }
 
@@ -49,14 +52,16 @@ export default async function TodayPage() {
     }
   }
 
-  // group + sort: assigned-to-you, group tasks, personal
-  const categorize = (t: typeof tasks extends (infer U)[] | null ? U : never) => {
+  type TaskT = NonNullable<typeof tasks>[number];
+  const categorize = (t: TaskT) => {
+    if (t.total_target) return "long-term";
     if (t.created_by_user_id === user.userId) return "personal";
     if (t.assignee_user_id === user.userId) return "for-you";
     return "group";
   };
 
-  const sections: Record<string, typeof tasks> = {
+  const sections: Record<string, TaskT[]> = {
+    "long-term": [],
     "for-you": [],
     group: [],
     personal: [],
@@ -64,6 +69,7 @@ export default async function TodayPage() {
   for (const t of tasks ?? []) sections[categorize(t)]!.push(t);
 
   const labels: Record<string, { title: string; badgeText: string; badgeClass: string }> = {
+    "long-term": { title: "Long-term goals", badgeText: "Long-term", badgeClass: "bg-purple-500/20 text-purple-700 dark:text-purple-300" },
     "for-you": { title: "Assigned to you", badgeText: "For you", badgeClass: "bg-amber-500/20 text-amber-700 dark:text-amber-300" },
     group: { title: "Group tasks", badgeText: "Group", badgeClass: "bg-sky-500/20 text-sky-700 dark:text-sky-300" },
     personal: { title: "Your own tasks", badgeText: "Personal", badgeClass: "bg-emerald-500/20 text-emerald-700 dark:text-emerald-300" },
@@ -77,7 +83,7 @@ export default async function TodayPage() {
         <p className="text-sm text-[var(--color-foreground)]/60 mb-6">No tasks yet. Add a personal one below, or hang tight for the admin.</p>
       ) : (
         <div className="space-y-6 mb-6">
-          {(["for-you", "group", "personal"] as const).map((key) => {
+          {(["long-term", "for-you", "group", "personal"] as const).map((key) => {
             const items = sections[key];
             if (!items || items.length === 0) return null;
             const label = labels[key];
@@ -86,7 +92,9 @@ export default async function TodayPage() {
                 <h2 className="text-xs uppercase tracking-wide text-[var(--color-foreground)]/60 mb-2">{label.title}</h2>
                 <ul className="space-y-3">
                   {items.map((t) => {
-                    const count = milestoneCounts[t.id] || 0;
+                    const isLongTerm = !!t.total_target;
+                    const count = isLongTerm ? (totalCounts[t.id] || 0) : (milestoneCounts[t.id] || 0);
+                    const target = isLongTerm ? t.total_target! : t.target_per_milestone;
                     const doneToday = doneTodaySet.has(t.id);
                     return (
                       <TaskRow
@@ -94,7 +102,8 @@ export default async function TodayPage() {
                         task={t}
                         doneToday={doneToday}
                         count={count}
-                        target={t.target_per_milestone}
+                        target={target}
+                        isLongTerm={isLongTerm}
                         forDate={today}
                         imageUrl={signed[t.id]}
                         badgeText={label.badgeText}

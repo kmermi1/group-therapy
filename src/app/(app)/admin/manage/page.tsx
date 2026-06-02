@@ -80,6 +80,13 @@ export default async function AdminManagePage() {
             </select>
           </div>
           <div>
+            <Label htmlFor="totalTarget">Long-term goal (optional)</Label>
+            <Input id="totalTarget" name="totalTarget" type="number" min={1} placeholder="e.g. 604" />
+            <p className="text-[11px] text-[var(--color-foreground)]/60 mt-1">
+              Total completions across <em>all</em> milestones. Use for goals like &ldquo;read 604 pages of Quran&rdquo; that span many weeks. Leave blank for a normal weekly task.
+            </p>
+          </div>
+          <div>
             <Label htmlFor="image">Image (optional)</Label>
             <input id="image" name="image" type="file" accept="image/*" className="text-sm w-full" />
           </div>

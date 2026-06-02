@@ -15,6 +15,7 @@ export default function TaskRow({
   doneToday,
   count,
   target,
+  isLongTerm,
   forDate,
   imageUrl,
   badgeText,
@@ -25,6 +26,7 @@ export default function TaskRow({
   doneToday: boolean;
   count: number;
   target: number;
+  isLongTerm?: boolean;
   forDate: string;
   imageUrl?: string;
   badgeText: string;
@@ -89,9 +91,9 @@ export default function TaskRow({
             <span className="text-[10px] uppercase tracking-wide px-1.5 py-0.5 rounded bg-[var(--color-border)]/60">
               {task.frequency}
             </span>
-            {target > 1 && (
+            {(target > 1 || isLongTerm) && (
               <span className={`text-[10px] font-mono px-1.5 py-0.5 rounded ${metTarget ? "bg-emerald-500/30 text-emerald-700 dark:text-emerald-300" : "bg-[var(--color-border)]/60"}`}>
-                {optimisticCount}/{target}
+                {optimisticCount}/{target}{isLongTerm ? " all-time" : ""}
               </span>
             )}
           </div>

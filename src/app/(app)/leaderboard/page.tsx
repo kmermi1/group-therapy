@@ -26,7 +26,7 @@ export default async function LeaderboardPage({
   // only admin-created tasks count
   const { data: tasks } = await sb
     .from("tasks")
-    .select("id, title, frequency, target_per_milestone, assignee_user_id")
+    .select("id, title, frequency, target_per_milestone, total_target, assignee_user_id")
     .eq("group_id", s.groupId)
     .is("archived_at", null)
     .is("created_by_user_id", null);
@@ -38,14 +38,24 @@ export default async function LeaderboardPage({
     .eq("tasks.group_id", s.groupId)
     .is("tasks.created_by_user_id", null);
 
-  // (user, task) -> count this milestone
+  const longTermIds = (tasks ?? []).filter((t) => t.total_target).map((t) => t.id);
+  const { data: allTimeComps } = longTermIds.length
+    ? await sb
+        .from("task_completions")
+        .select("user_id, task_id")
+        .in("task_id", longTermIds)
+    : { data: [] as { user_id: string; task_id: string }[] };
+
   const userTaskCount: Record<string, number> = {};
-  // user -> total completions
   const userTotal: Record<string, number> = {};
   for (const c of comps ?? []) {
     const k = `${c.user_id}:${c.task_id}`;
     userTaskCount[k] = (userTaskCount[k] || 0) + 1;
     userTotal[c.user_id] = (userTotal[c.user_id] || 0) + 1;
+  }
+  const userTaskAllTime: Record<string, number> = {};
+  for (const c of allTimeComps ?? []) {
+    userTaskAllTime[`${c.user_id}:${c.task_id}`] = (userTaskAllTime[`${c.user_id}:${c.task_id}`] || 0) + 1;
   }
 
   return (
@@ -70,7 +80,7 @@ export default async function LeaderboardPage({
       {view === "people" ? (
         <PeopleView users={users ?? []} totals={userTotal} currentUserId={s.kind === "user" ? s.userId : null} />
       ) : (
-        <TasksView tasks={tasks ?? []} users={users ?? []} counts={userTaskCount} currentUserId={s.kind === "user" ? s.userId : null} />
+        <TasksView tasks={tasks ?? []} users={users ?? []} counts={userTaskCount} allTime={userTaskAllTime} currentUserId={s.kind === "user" ? s.userId : null} />
       )}
     </main>
   );
@@ -113,11 +123,13 @@ function TasksView({
   tasks,
   users,
   counts,
+  allTime,
   currentUserId,
 }: {
-  tasks: { id: string; title: string; frequency: string; target_per_milestone: number; assignee_user_id: string | null }[];
+  tasks: { id: string; title: string; frequency: string; target_per_milestone: number; total_target: number | null; assignee_user_id: string | null }[];
   users: { id: string; username: string }[];
   counts: Record<string, number>;
+  allTime: Record<string, number>;
   currentUserId: string | null;
 }) {
   if (tasks.length === 0) {
@@ -126,25 +138,31 @@ function TasksView({
   return (
     <div className="space-y-3">
       {tasks.map((t) => {
-        // who's eligible: everyone if assignee is null, else just the one user
         const eligible = t.assignee_user_id ? users.filter((u) => u.id === t.assignee_user_id) : users;
+        const isLongTerm = !!t.total_target;
+        const target = isLongTerm ? t.total_target! : t.target_per_milestone;
+        const source = isLongTerm ? allTime : counts;
         const rows = eligible
-          .map((u) => ({
-            id: u.id,
-            username: u.username,
-            count: counts[`${u.id}:${t.id}`] ?? 0,
-            met: (counts[`${u.id}:${t.id}`] ?? 0) >= t.target_per_milestone,
-          }))
+          .map((u) => {
+            const c = source[`${u.id}:${t.id}`] ?? 0;
+            return { id: u.id, username: u.username, count: c, met: c >= target };
+          })
           .sort((a, b) => b.count - a.count);
 
         return (
           <Card key={t.id}>
-            <div className="flex items-baseline gap-2 mb-2">
+            <div className="flex items-baseline gap-2 mb-2 flex-wrap">
               <h3 className="font-semibold flex-1 min-w-0 truncate">{t.title}</h3>
-              <span className="text-[10px] uppercase tracking-wide px-1.5 py-0.5 rounded bg-[var(--color-border)]/60">
-                {t.frequency}
-              </span>
-              {t.target_per_milestone > 1 && (
+              {isLongTerm ? (
+                <span className="text-[10px] uppercase tracking-wide px-1.5 py-0.5 rounded bg-purple-500/20 text-purple-700 dark:text-purple-300">
+                  long-term
+                </span>
+              ) : (
+                <span className="text-[10px] uppercase tracking-wide px-1.5 py-0.5 rounded bg-[var(--color-border)]/60">
+                  {t.frequency}
+                </span>
+              )}
+              {!isLongTerm && t.target_per_milestone > 1 && (
                 <span className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-[var(--color-border)]/60">≥{t.target_per_milestone}</span>
               )}
             </div>
@@ -156,7 +174,7 @@ function TasksView({
                 >
                   <span className="flex-1 truncate">{r.username}</span>
                   <span className={`font-mono text-xs px-1.5 py-0.5 rounded ${r.met ? "bg-emerald-500/30 text-emerald-700 dark:text-emerald-300" : "bg-[var(--color-border)]/60"}`}>
-                    {r.count}/{t.target_per_milestone}
+                    {r.count}/{target}
                   </span>
                 </li>
               ))}

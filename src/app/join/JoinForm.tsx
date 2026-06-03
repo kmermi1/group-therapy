@@ -4,17 +4,17 @@ import { useState, useTransition } from "react";
 import { Button, Input, Label } from "@/components/ui";
 import { previewUsernameAction, joinGroupAction } from "@/app/actions/auth";
 import Link from "next/link";
-import { t, LOCALES, LOCALE_LABELS, type Locale } from "@/lib/i18n";
+import { t, type Locale } from "@/lib/i18n";
 
-export default function JoinForm() {
-  const [locale, setLocale] = useState<Locale>("en");
+export default function JoinForm({ locale = "en" }: { locale?: Locale }) {
+  const [currentLocale, setCurrentLocale] = useState<Locale>(locale);
   const [step, setStep] = useState<"code" | "name">("code");
   const [groupCode, setGroupCode] = useState("");
   const [username, setUsername] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [pending, start] = useTransition();
 
-  const tr = (k: Parameters<typeof t>[0], p?: Record<string, string | number>) => t(k, locale, p);
+  const tr = (k: Parameters<typeof t>[0], p?: Record<string, string | number>) => t(k, currentLocale, p);
 
   async function lookupCode(e: React.FormEvent) {
     e.preventDefault();
@@ -40,24 +40,6 @@ export default function JoinForm() {
 
   return (
     <>
-      <div className="mb-5">
-        <div className="text-xs text-[var(--color-foreground)]/60 mb-1">{tr("language")}</div>
-        <div className="flex gap-2 p-1 bg-[var(--color-card)] rounded-lg">
-          {LOCALES.map((l) => (
-            <button
-              key={l}
-              type="button"
-              onClick={() => setLocale(l)}
-              className={`flex-1 text-center py-2 rounded-md text-sm font-medium ${
-                locale === l ? "bg-[var(--color-background)]" : "text-[var(--color-foreground)]/60"
-              }`}
-            >
-              {LOCALE_LABELS[l]}
-            </button>
-          ))}
-        </div>
-      </div>
-
       {step === "code" ? (
         <form onSubmit={lookupCode} className="space-y-4">
           <div>
@@ -82,7 +64,7 @@ export default function JoinForm() {
         <form action={joinGroupAction} className="space-y-4">
           <input type="hidden" name="groupCode" value={groupCode} />
           <input type="hidden" name="username" value={username} />
-          <input type="hidden" name="locale" value={locale} />
+          <input type="hidden" name="locale" value={currentLocale} />
           <div>
             <Label>{tr("yourUsername")}</Label>
             <div className="flex items-center gap-2 p-3 rounded-lg border border-[var(--color-border)] bg-[var(--color-card)]">

@@ -1,4 +1,4 @@
-import JoinForm from "./JoinForm";
+import JoinFlow from "./JoinFlow";
 
 export default function JoinPage() {
   return (
@@ -7,7 +7,7 @@ export default function JoinPage() {
         <h1 className="text-2xl font-semibold tracking-tight">Join a group</h1>
         <p className="text-sm text-[var(--foreground-mute)] mt-1">Gruba katıl</p>
       </header>
-      <JoinForm />
+      <JoinFlow />
     </main>
   );
 }

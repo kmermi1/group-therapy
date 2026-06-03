@@ -30,6 +30,12 @@ export async function createPlanAction(formData: FormData) {
   if (!name || !unitLabel || !unitsPerDay) throw new Error("Name, unit label, and units/day required.");
   if (unitsPerDay % blockSize !== 0) throw new Error("Units per day must be a multiple of block size.");
 
+  const extrasRaw = String(formData.get("extras") || "");
+  const extras = extrasRaw
+    .split(/[\n,]/)
+    .map((s) => s.trim())
+    .filter(Boolean);
+
   const sb = createAdminClient();
   const { data: plan, error } = await sb
     .from("reading_plans")
@@ -48,6 +54,12 @@ export async function createPlanAction(formData: FormData) {
     .select()
     .single();
   if (error || !plan) throw new Error(error?.message || "Failed to create plan");
+
+  if (extras.length > 0) {
+    await sb.from("reading_plan_extras").insert(
+      extras.map((name, i) => ({ plan_id: plan.id, name, position: i }))
+    );
+  }
 
   revalidatePath("/admin/plans");
   revalidatePath("/today");
@@ -188,6 +200,23 @@ export async function editPlanAction(formData: FormData) {
   const { error } = await sb.from("reading_plans").update(update).eq("id", planId);
   if (error) throw new Error(error.message);
 
+  // Replace extras: parse the textarea, then upsert by position.
+  // Simplest reliable approach: delete then insert. Existing allocations
+  // referencing deleted extras cascade-delete (good — admin chose to remove them).
+  const extrasRaw = formData.get("extras");
+  if (extrasRaw !== null) {
+    const extras = String(extrasRaw)
+      .split(/[\n,]/)
+      .map((s) => s.trim())
+      .filter(Boolean);
+    await sb.from("reading_plan_extras").delete().eq("plan_id", planId);
+    if (extras.length > 0) {
+      await sb.from("reading_plan_extras").insert(
+        extras.map((name, i) => ({ plan_id: planId, name, position: i }))
+      );
+    }
+  }
+
   revalidatePath("/admin/plans");
   revalidatePath(`/plans/${planId}`);
   revalidatePath("/today");
@@ -207,17 +236,74 @@ export async function closePlanAction(formData: FormData) {
   revalidatePath("/today");
 }
 
+export async function openPlanAction(formData: FormData) {
+  const admin = await requireAdmin();
+  const planId = String(formData.get("planId") || "");
+  const sb = createAdminClient();
+  await sb
+    .from("reading_plans")
+    .update({ status: "active", closed_at: null })
+    .eq("id", planId)
+    .eq("group_id", admin.groupId);
+  revalidatePath("/admin/plans");
+  revalidatePath(`/plans/${planId}`);
+  revalidatePath("/today");
+}
+
 /**
- * Claim a contiguous range. Caller is a user. Conflicts with other
- * users' ACTIVE allocations or with the unit bounds will throw.
+ * Claim a contiguous range OR an extra. Caller is a user.
+ * If extraId is provided, claims that extra (single-owner). Otherwise
+ * claims (startUnit, endUnit) range with conflict + alignment checks.
  */
 export async function claimRangeAction(formData: FormData) {
   const user = await requireUser();
   const planId = String(formData.get("planId") || "");
+  const extraId = String(formData.get("extraId") || "");
+
+  if (!planId) throw new Error("Plan missing.");
+
+  // Extras path: single-slot claim
+  if (extraId) {
+    const sb = createAdminClient();
+    const { data: plan } = await sb
+      .from("reading_plans")
+      .select("id, group_id, status, start_date")
+      .eq("id", planId)
+      .single();
+    if (!plan || plan.group_id !== user.groupId) throw new Error("Plan not found.");
+    if (plan.status !== "active") throw new Error("Plan is closed.");
+
+    const { data: extra } = await sb.from("reading_plan_extras").select("id, plan_id").eq("id", extraId).single();
+    if (!extra || extra.plan_id !== planId) throw new Error("Extra not found.");
+
+    const { data: existing } = await sb
+      .from("reading_plan_allocations")
+      .select("id, user_id")
+      .eq("plan_id", planId)
+      .eq("extra_id", extraId)
+      .is("to_day", null);
+    if (existing && existing.length > 0) throw new Error("Already claimed.");
+
+    const planDay = Math.max(1, todayPlanDay(plan.start_date));
+    const { error } = await sb.from("reading_plan_allocations").insert({
+      plan_id: planId,
+      user_id: user.userId,
+      extra_id: extraId,
+      from_day: planDay,
+      to_day: null,
+    });
+    if (error) throw new Error(error.message);
+
+    revalidatePath(`/plans/${planId}`);
+    revalidatePath("/today");
+    return;
+  }
+
+  // Range path
   const start = Number(formData.get("startUnit") || 0);
   const end = Number(formData.get("endUnit") || 0);
 
-  if (!planId || start < 1 || end < start) throw new Error("Invalid range.");
+  if (start < 1 || end < start) throw new Error("Invalid range.");
 
   const sb = createAdminClient();
   const { data: plan } = await sb
@@ -228,6 +314,7 @@ export async function claimRangeAction(formData: FormData) {
   if (!plan || plan.group_id !== user.groupId) throw new Error("Plan not found.");
   if (plan.status !== "active") throw new Error("Plan is closed.");
   if (end > plan.units_per_day) throw new Error(`Max unit is ${plan.units_per_day}.`);
+  // overlap & alignment checks below also need to ignore extras (start_unit IS NULL)
   if (((start - 1) % plan.block_size) !== 0 || (end % plan.block_size) !== 0) {
     throw new Error(`Range must align to blocks of ${plan.block_size}.`);
   }
@@ -235,10 +322,12 @@ export async function claimRangeAction(formData: FormData) {
   // make sure nothing in this range is already taken by an active alloc
   const { data: existing } = await sb
     .from("reading_plan_allocations")
-    .select("start_unit, end_unit, user_id")
+    .select("start_unit, end_unit, user_id, extra_id")
     .eq("plan_id", planId)
     .is("to_day", null);
   for (const r of existing ?? []) {
+    if (r.extra_id) continue; // ignore extras
+    if (r.start_unit == null || r.end_unit == null) continue;
     if (!(end < r.start_unit || start > r.end_unit)) {
       throw new Error(`Conflicts with units ${r.start_unit}–${r.end_unit}.`);
     }
@@ -290,16 +379,55 @@ export async function releaseRangeAction(formData: FormData) {
 }
 
 /**
- * Admin reassigns a range (cap existing active alloc for the conflicting
- * range or user, then insert new alloc for target_user_id).
+ * Admin reassigns a range or an extra to a specific user.
+ * If extraId is provided, assigns that extra (replacing existing owner).
+ * Otherwise assigns the unit range (capping any overlap).
  */
 export async function adminAssignRangeAction(formData: FormData) {
   const admin = await requireAdmin();
   const planId = String(formData.get("planId") || "");
+  const extraId = String(formData.get("extraId") || "");
+  const targetUserId = String(formData.get("targetUserId") || "");
+  if (!planId || !targetUserId) throw new Error("Invalid input.");
+
+  if (extraId) {
+    const sb = createAdminClient();
+    const { data: plan } = await sb
+      .from("reading_plans")
+      .select("id, group_id, start_date")
+      .eq("id", planId)
+      .single();
+    if (!plan || plan.group_id !== admin.groupId) throw new Error("Plan not found.");
+    const planDay = Math.max(1, todayPlanDay(plan.start_date));
+    const { data: existing } = await sb
+      .from("reading_plan_allocations")
+      .select("id, from_day")
+      .eq("plan_id", planId)
+      .eq("extra_id", extraId)
+      .is("to_day", null);
+    for (const r of existing ?? []) {
+      const toDay = planDay - 1;
+      if (toDay < r.from_day) {
+        await sb.from("reading_plan_allocations").delete().eq("id", r.id);
+      } else {
+        await sb.from("reading_plan_allocations").update({ to_day: toDay }).eq("id", r.id);
+      }
+    }
+    await sb.from("reading_plan_allocations").insert({
+      plan_id: planId,
+      user_id: targetUserId,
+      extra_id: extraId,
+      from_day: planDay,
+      to_day: null,
+    });
+    revalidatePath(`/plans/${planId}`);
+    revalidatePath("/today");
+    return;
+  }
+
   const start = Number(formData.get("startUnit") || 0);
   const end = Number(formData.get("endUnit") || 0);
-  const targetUserId = String(formData.get("targetUserId") || "");
-  if (!planId || !targetUserId || start < 1 || end < start) throw new Error("Invalid input.");
+  if (start < 1 || end < start) throw new Error("Invalid input.");
 
   const sb = createAdminClient();
   const { data: plan } = await sb
@@ -311,13 +439,15 @@ export async function adminAssignRangeAction(formData: FormData) {
   if (end > plan.units_per_day) throw new Error(`Max unit is ${plan.units_per_day}.`);
 
   const planDay = Math.max(1, todayPlanDay(plan.start_date));
-  // cap any active allocations that overlap this range
+  // cap any active allocations that overlap this range (skip extras)
   const { data: existing } = await sb
     .from("reading_plan_allocations")
     .select("*")
     .eq("plan_id", planId)
     .is("to_day", null);
   for (const r of existing ?? []) {
+    if (r.extra_id) continue;
+    if (r.start_unit == null || r.end_unit == null) continue;
     if (!(end < r.start_unit || start > r.end_unit)) {
       const toDay = planDay - 1;
       if (toDay < r.from_day) {

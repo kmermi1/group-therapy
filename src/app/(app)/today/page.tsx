@@ -6,7 +6,7 @@ import { PageHeader } from "@/components/ui";
 import TaskRow from "./TaskRow";
 import AddPersonalTask from "./AddPersonalTask";
 import PlanCard from "./PlanCard";
-import { todayPlanDay, dayLabel, rangesActiveOnDay, formatRanges, isWithinSchedule } from "@/lib/plans";
+import { todayPlanDay, dayLabel, rangesActiveOnDay, formatRanges, isWithinSchedule, extraOwedOnDay } from "@/lib/plans";
 import { t } from "@/lib/i18n";
 
 function SectionHeader({ icon, title, desc, count }: { icon: string; title: string; desc: string; count: number }) {
@@ -108,7 +108,7 @@ export default async function TodayPage() {
 
     const { data: myAllocs } = await sb
       .from("reading_plan_allocations")
-      .select("id, start_unit, end_unit, from_day, to_day")
+      .select("id, start_unit, end_unit, from_day, to_day, extra_id, reading_plan_extras(name)")
       .eq("plan_id", plan.id)
       .eq("user_id", user.userId);
 
@@ -120,8 +120,26 @@ export default async function TodayPage() {
 
     const completedSet = new Set((myComps ?? []).map((c) => c.plan_day));
 
-    const todayRangesArr = rangesActiveOnDay(myAllocs ?? [], pd);
-    const todayRanges = todayRangesArr.length > 0 ? formatRanges(todayRangesArr) : null;
+    const todayAllocs = rangesActiveOnDay(myAllocs ?? [], pd);
+    const todayRangeAllocs = todayAllocs.filter((a) => !a.extra_id && a.start_unit != null && a.end_unit != null);
+    const todayExtraNames = extraOwedOnDay(plan.schedule, plan.total_days, pd)
+      ? todayAllocs
+          .filter((a) => a.extra_id)
+          .map((a) => {
+            const ex = (a as { reading_plan_extras?: { name: string } | { name: string }[] }).reading_plan_extras;
+            const e = Array.isArray(ex) ? ex[0] : ex;
+            return e?.name;
+          })
+          .filter((n): n is string => !!n)
+      : [];
+    const todayRanges = todayRangeAllocs.length > 0 || todayExtraNames.length > 0
+      ? [
+          todayRangeAllocs.length > 0
+            ? formatRanges(todayRangeAllocs as { start_unit: number; end_unit: number }[])
+            : null,
+          ...todayExtraNames,
+        ].filter(Boolean).join(", ")
+      : null;
     const doneToday = completedSet.has(pd);
     const todayLabelStr =
       plan.schedule === "progressing" && plan.day_label_template && plan.start_at !== null
@@ -131,15 +149,30 @@ export default async function TodayPage() {
     // outstanding = past days where user had any active allocation and no completion
     const outstanding: { planDay: number; label: string | null; ranges: string; done: boolean }[] = [];
     for (let d = 1; d < pd; d++) {
-      const dayRanges = rangesActiveOnDay(myAllocs ?? [], d);
-      if (dayRanges.length === 0) continue;
+      const dayAllocs = rangesActiveOnDay(myAllocs ?? [], d);
+      if (dayAllocs.length === 0) continue;
+      const rangeAllocs = dayAllocs.filter((a) => !a.extra_id && a.start_unit != null && a.end_unit != null);
+      const extraNames = extraOwedOnDay(plan.schedule, plan.total_days, d)
+        ? dayAllocs
+            .filter((a) => a.extra_id)
+            .map((a) => {
+              const ex = (a as { reading_plan_extras?: { name: string } | { name: string }[] }).reading_plan_extras;
+              const e = Array.isArray(ex) ? ex[0] : ex;
+              return e?.name;
+            })
+            .filter((n): n is string => !!n)
+        : [];
+      if (rangeAllocs.length === 0 && extraNames.length === 0) continue;
       if (completedSet.has(d)) continue;
       outstanding.push({
         planDay: d,
         label: plan.schedule === "progressing" && plan.day_label_template && plan.start_at !== null
           ? dayLabel(plan.day_label_template, plan.start_at, d)
           : null,
-        ranges: formatRanges(dayRanges),
+        ranges: [
+          rangeAllocs.length > 0 ? formatRanges(rangeAllocs as { start_unit: number; end_unit: number }[]) : null,
+          ...extraNames,
+        ].filter(Boolean).join(", "),
         done: false,
       });
     }

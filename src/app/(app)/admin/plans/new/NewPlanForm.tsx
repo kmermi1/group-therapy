@@ -76,6 +76,19 @@ export default function NewPlanForm({ today }: { today: string }) {
         </Card>
       )}
 
+      <Card className="space-y-3">
+        <h2 className="font-semibold">Extras (optional)</h2>
+        <p className="text-[11px] text-[var(--foreground-mute)]">
+          Named single-slot claims like &ldquo;Duha&rdquo; or &ldquo;Hatim Dua&rdquo;. One per line. For progressing plans the claimant only owes the extra on the final day; for repeating plans, every day.
+        </p>
+        <textarea
+          name="extras"
+          rows={3}
+          placeholder={"Duha\nHatim Dua"}
+          className="w-full rounded-lg border border-[var(--border)] bg-[var(--card)] px-3 py-2.5 text-sm outline-none"
+        />
+      </Card>
+
       <Button type="submit" className="w-full">Create plan</Button>
       <Link href="/admin/plans" className="block text-center text-sm text-[var(--color-foreground)]/60">Cancel</Link>
     </form>

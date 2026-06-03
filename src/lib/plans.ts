@@ -57,8 +57,9 @@ export function isWithinSchedule(planDay: number, totalDays: number | null): boo
  */
 export type AllocationRow = {
   id: string;
-  start_unit: number;
-  end_unit: number;
+  start_unit: number | null;
+  end_unit: number | null;
+  extra_id?: string | null;
   from_day: number;
   to_day: number | null;
 };
@@ -67,6 +68,16 @@ export function rangesActiveOnDay(allocs: AllocationRow[], planDay: number): All
   return allocs.filter(
     (a) => a.from_day <= planDay && (a.to_day === null || a.to_day >= planDay)
   );
+}
+
+export function extraOwedOnDay(
+  schedule: "progressing" | "repeating",
+  totalDays: number | null,
+  planDay: number
+): boolean {
+  if (schedule === "repeating") return true;
+  if (totalDays && planDay === totalDays) return true;
+  return false;
 }
 
 /** Pretty-print a set of ranges, e.g. [{1,5},{7,9}] -> "1–5, 7–9". */

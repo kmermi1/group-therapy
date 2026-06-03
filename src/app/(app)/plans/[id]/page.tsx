@@ -24,9 +24,15 @@ export default async function PlanPage({ params }: { params: Promise<{ id: strin
 
   const { data: allocs } = await sb
     .from("reading_plan_allocations")
-    .select("id, user_id, start_unit, end_unit, from_day, to_day")
+    .select("id, user_id, start_unit, end_unit, from_day, to_day, extra_id")
     .eq("plan_id", plan.id)
-    .order("start_unit");
+    .order("start_unit", { nullsFirst: false });
+
+  const { data: extras } = await sb
+    .from("reading_plan_extras")
+    .select("id, name")
+    .eq("plan_id", plan.id)
+    .order("position");
 
   const { data: comps } = await sb
     .from("reading_plan_completions")
@@ -120,6 +126,12 @@ export default async function PlanPage({ params }: { params: Promise<{ id: strin
         users={users ?? []}
         activeAllocs={activeAllocs}
         planStatus={plan.status}
+        extras={extras ?? []}
+        extraOwners={Object.fromEntries(
+          activeAllocs
+            .filter((a) => a.extra_id)
+            .map((a) => [a.extra_id, a.user_id])
+        )}
       />
 
       {s.kind === "admin" && (

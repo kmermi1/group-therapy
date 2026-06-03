@@ -4,7 +4,7 @@ import { useState, useTransition } from "react";
 import { Button } from "@/components/ui";
 import { claimRangeAction, releaseRangeAction, adminAssignRangeAction } from "@/app/actions/plans";
 
-type AllocRow = { id: string; user_id: string; start_unit: number; end_unit: number };
+type AllocRow = { id: string; user_id: string; start_unit: number | null; end_unit: number | null; extra_id?: string | null };
 
 export default function AllocationGrid({
   planId,
@@ -17,6 +17,8 @@ export default function AllocationGrid({
   users,
   activeAllocs,
   planStatus,
+  extras,
+  extraOwners,
 }: {
   planId: string;
   unitsPerDay: number;
@@ -28,6 +30,8 @@ export default function AllocationGrid({
   users: { id: string; username: string }[];
   activeAllocs: AllocRow[];
   planStatus: string;
+  extras: { id: string; name: string }[];
+  extraOwners: Record<string, string>;
 }) {
   const [selStart, setSelStart] = useState<number | null>(null);
   const [selEnd, setSelEnd] = useState<number | null>(null);
@@ -83,6 +87,39 @@ export default function AllocationGrid({
     setSelStart(null);
     setSelEnd(null);
     setError(null);
+  }
+
+  function claimExtra(extraId: string) {
+    if (closed) return;
+    const existingOwner = extraOwners[extraId];
+    if (existingOwner === currentUserId) {
+      // your own: release
+      const alloc = activeAllocs.find((a) => a.extra_id === extraId && a.user_id === currentUserId);
+      if (!alloc) return;
+      if (!confirm("Release this extra?")) return;
+      const fd = new FormData();
+      fd.set("allocId", alloc.id);
+      start(async () => {
+        try { await releaseRangeAction(fd); } catch (e) { setError((e as Error).message); }
+      });
+      return;
+    }
+    if (existingOwner && !isAdmin) return; // taken
+    setError(null);
+    const fd = new FormData();
+    fd.set("planId", planId);
+    fd.set("extraId", extraId);
+    if (isAdmin) {
+      if (!assignTo) { setError("Pick a member to assign this extra to."); return; }
+      fd.set("targetUserId", assignTo);
+      start(async () => {
+        try { await adminAssignRangeAction(fd); } catch (e) { setError((e as Error).message); }
+      });
+    } else {
+      start(async () => {
+        try { await claimRangeAction(fd); } catch (e) { setError((e as Error).message); }
+      });
+    }
   }
 
   function submitClaim() {
@@ -189,7 +226,37 @@ export default function AllocationGrid({
 
       {error && <p className="text-sm text-red-500">{error}</p>}
 
-      <p className="text-[11px] text-[var(--color-foreground)]/60">
+      {extras.length > 0 && (
+        <div className="pt-2">
+          <div className="text-xs uppercase tracking-wide text-[var(--foreground-mute)] font-medium mb-2">Extras</div>
+          <div className="flex flex-wrap gap-2">
+            {extras.map((ex) => {
+              const ownerId = extraOwners[ex.id];
+              const isOwn = ownerId && ownerId === currentUserId;
+              return (
+                <button
+                  key={ex.id}
+                  onClick={() => claimExtra(ex.id)}
+                  disabled={pending || closed || (!!ownerId && !isOwn && !isAdmin)}
+                  className={`text-sm px-3 py-2 rounded-lg border flex flex-col items-start gap-0.5 ${
+                    isOwn
+                      ? "bg-[var(--accent)] border-[var(--accent)] text-[var(--accent-fg)]"
+                      : ownerId
+                        ? "bg-[var(--surface)] border-[var(--border)] text-[var(--foreground-mute)]"
+                        : "bg-[var(--card)] border-[var(--border)] hover:border-[var(--accent)]"
+                  }`}
+                >
+                  <span className="font-medium">{ex.name}</span>
+                  {ownerId && <span className="text-[10px] opacity-80">{usernameMap[ownerId] ?? "?"}</span>}
+                  {!ownerId && <span className="text-[10px] opacity-60">open</span>}
+                </button>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
+      <p className="text-[11px] text-[var(--foreground-mute)]">
         {closed
           ? "This plan is closed."
           : "Tap a free tile, then tap another to make a range. Tap your own tile to release it."}

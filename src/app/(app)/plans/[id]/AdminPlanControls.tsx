@@ -3,7 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import { Button, Input, Label, Card } from "@/components/ui";
-import { closePlanAction, clonePlanAction } from "@/app/actions/plans";
+import { closePlanAction, openPlanAction, clonePlanAction } from "@/app/actions/plans";
 import { todayInGroupTz } from "@/lib/plans";
 
 export default function AdminPlanControls({
@@ -38,6 +38,14 @@ export default function AdminPlanControls({
             }}
           >
             Close plan
+          </Button>
+        </form>
+      )}
+      {status === "closed" && (
+        <form action={openPlanAction}>
+          <input type="hidden" name="planId" value={planId} />
+          <Button type="submit" className="w-full">
+            Reopen plan
           </Button>
         </form>
       )}

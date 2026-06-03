@@ -15,6 +15,13 @@ export default async function EditPlanPage({ params }: { params: Promise<{ id: s
   const startDate = String(plan.start_date).slice(0, 10);
   const isRepeating = plan.schedule === "repeating";
 
+  const { data: extras } = await sb
+    .from("reading_plan_extras")
+    .select("name")
+    .eq("plan_id", plan.id)
+    .order("position");
+  const extrasText = (extras ?? []).map((e) => e.name).join("\n");
+
   return (
     <main className="max-w-md mx-auto w-full px-5 py-6 reveal">
       <PageHeader title="Edit plan" />
@@ -86,6 +93,20 @@ export default async function EditPlanPage({ params }: { params: Promise<{ id: s
             </p>
           </>
         )}
+
+        <Card className="space-y-3">
+          <h2 className="font-semibold">Extras</h2>
+          <p className="text-[11px] text-[var(--foreground-mute)]">
+            One per line. Removing an extra cancels any current claim on it.
+          </p>
+          <textarea
+            name="extras"
+            rows={3}
+            defaultValue={extrasText}
+            placeholder={"Duha\nHatim Dua"}
+            className="w-full rounded-lg border border-[var(--border)] bg-[var(--card)] px-3 py-2.5 text-sm outline-none"
+          />
+        </Card>
 
         <Button type="submit" className="w-full">Save changes</Button>
         <Link href={`/plans/${plan.id}`} className="block text-center text-sm text-[var(--foreground-mute)]">Cancel</Link>

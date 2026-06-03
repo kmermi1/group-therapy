@@ -28,7 +28,7 @@ export default function AdminResetPasswordForm() {
     start(async () => {
       try {
         await resetAdminPasswordWithCodeAction(formData);
-        router.push("/admin-join?reset=success");
+        router.push("/login?as=admin&reset=success");
       } catch (e) {
         setError((e as Error).message);
       }

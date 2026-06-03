@@ -31,10 +31,29 @@ export default function EditPlanForm({ planId, plan }: Props) {
   async function handleSubmit(formData: FormData) {
     setError(null);
     setPending(true);
+
+    // Client-side validation for repeating plans
+    if (isRepeating) {
+      const unitsPerDayStr = formData.get("unitsPerDay") as string;
+      const blockSizeStr = formData.get("blockSize") as string;
+
+      if (unitsPerDayStr && blockSizeStr) {
+        const unitsPerDay = Number(unitsPerDayStr);
+        const blockSize = Number(blockSizeStr);
+
+        if (unitsPerDay % blockSize !== 0) {
+          setError(`Units per day (${unitsPerDay}) must be a multiple of block size (${blockSize})`);
+          setPending(false);
+          return;
+        }
+      }
+    }
+
     try {
       await editPlanAction(formData);
     } catch (e) {
-      setError((e as Error).message);
+      const message = e instanceof Error ? e.message : "An error occurred while saving";
+      setError(message);
       setPending(false);
     }
   }

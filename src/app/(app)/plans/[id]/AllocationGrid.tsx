@@ -51,8 +51,8 @@ export default function AllocationGrid({
       // tap on own tile = open release prompt for that allocation
       if (ownerId === currentUserId || isAdmin) {
         // find which allocation contains this unit
-        const alloc = activeAllocs.find((a) => a.user_id === ownerId && a.start_unit <= n && a.end_unit >= n);
-        if (alloc) {
+        const alloc = activeAllocs.find((a) => a.user_id === ownerId && a.start_unit != null && a.end_unit != null && a.start_unit <= n && a.end_unit >= n);
+        if (alloc && alloc.start_unit != null && alloc.end_unit != null) {
           if (!confirm(`Release ${alloc.start_unit}–${alloc.end_unit}?`)) return;
           const fd = new FormData();
           fd.set("allocId", alloc.id);

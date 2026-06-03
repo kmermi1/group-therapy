@@ -4,6 +4,14 @@ import Link from "next/link";
 
 const DAYS = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
 
+function getDefaultDate(): string {
+  const today = new Date();
+  const yyyy = today.getFullYear();
+  const mm = String(today.getMonth() + 1).padStart(2, "0");
+  const dd = String(today.getDate()).padStart(2, "0");
+  return `${yyyy}-${mm}-${dd}`;
+}
+
 export default function CreateGroupPage() {
   return (
     <main className="flex-1 max-w-md mx-auto w-full px-5 py-8">
@@ -14,7 +22,19 @@ export default function CreateGroupPage() {
           <Input id="groupName" name="groupName" required maxLength={60} placeholder="e.g. Tuesday Crew" />
         </div>
         <div>
-          <Label htmlFor="startDay">Default milestone start day</Label>
+          <Label htmlFor="milestoneStartDate">Milestone start date</Label>
+          <Input
+            id="milestoneStartDate"
+            name="milestoneStartDate"
+            type="date"
+            defaultValue={getDefaultDate()}
+            required
+            className="w-full rounded-lg border border-[var(--color-border)] bg-[var(--color-card)] px-3 py-2.5 text-sm"
+          />
+          <p className="text-xs text-[var(--color-foreground)]/60 mt-1">The date your first milestone begins.</p>
+        </div>
+        <div>
+          <Label htmlFor="startDay">Default milestone reset day</Label>
           <select
             id="startDay"
             name="startDay"

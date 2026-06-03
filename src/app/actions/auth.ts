@@ -9,12 +9,13 @@ import { setSession, clearSession, getSession } from "@/lib/session";
 
 export async function createGroupAction(formData: FormData) {
   const groupName = String(formData.get("groupName") || "").trim();
+  const milestoneStartDate = String(formData.get("milestoneStartDate") || "").trim();
   const startDay = Number(formData.get("startDay") ?? 3);
   const adminUsername = String(formData.get("adminUsername") || "").trim();
   const adminPassword = String(formData.get("adminPassword") || "");
 
-  if (!groupName || !adminUsername || adminPassword.length < 6) {
-    throw new Error("Group name, admin username, and password (6+ chars) required.");
+  if (!groupName || !milestoneStartDate || !adminUsername || adminPassword.length < 6) {
+    throw new Error("Group name, milestone date, admin username, and password (6+ chars) required.");
   }
 
   const sb = createAdminClient();
@@ -39,7 +40,7 @@ export async function createGroupAction(formData: FormData) {
 
   const { data: group, error: groupErr } = await sb
     .from("groups")
-    .insert({ code, admin_invite_code: adminCode, name: groupName, default_start_day: startDay })
+    .insert({ code, admin_invite_code: adminCode, name: groupName, default_start_day: startDay, milestone_started_at: `${milestoneStartDate}T00:00:00+00` })
     .select()
     .single();
   if (groupErr || !group) throw new Error(groupErr?.message || "Group create failed");

@@ -339,4 +339,23 @@ export async function getMilestoneBounds(groupId: string) {
   return { milestoneStart: effective, group };
 }
 
+export async function updateMilestoneSettingsAction(formData: FormData) {
+  const admin = await requireAdmin();
+  const milestoneStartDate = String(formData.get("milestoneStartDate") || "").trim();
+  const startDay = Number(formData.get("startDay") ?? 3);
+
+  if (!milestoneStartDate) {
+    throw new Error("Milestone start date is required.");
+  }
+
+  const sb = createAdminClient();
+  const { error } = await sb
+    .from("groups")
+    .update({ milestone_started_at: `${milestoneStartDate}T00:00:00+00`, default_start_day: startDay })
+    .eq("id", admin.groupId);
+
+  if (error) throw new Error(error.message || "Failed to update milestone settings");
+  revalidatePath("/admin/settings");
+}
+
 export { todayDateString };

@@ -23,9 +23,16 @@ export default async function HistoryPage() {
   const today = todayInGroupTz();
   const { milestoneStart } = await getMilestoneBounds(user.groupId);
   const milestoneStartIso = milestoneStart.toISOString().slice(0, 10);
-  const windowStart = milestoneStartIso;
-  // how many past days between milestone start and today (exclusive of today)
-  const pastDayCount = Math.max(0, daysBetween(milestoneStartIso, today));
+
+  // Always show past 7 days for backfilling, regardless of milestone
+  const pastDayCount = 7;
+  // Calculate window start: 7 days ago from today
+  function dateNDaysAgo(n: number, fromDate: string = today): string {
+    const d = new Date(`${fromDate}T00:00:00Z`);
+    d.setUTCDate(d.getUTCDate() - n);
+    return d.toISOString().slice(0, 10);
+  }
+  const windowStart = dateNDaysAgo(pastDayCount);
 
   const { data: reset } = await sb
     .from("user_history_resets")
@@ -99,12 +106,10 @@ export default async function HistoryPage() {
         <button className="text-xs text-[var(--danger)] hover:underline">{tr("resetMyHistory")}</button>
       </form>
 
-      {Object.keys(dayCounts).length > 0 && (
-        <Card className="mb-4 overflow-x-auto">
-          <div className="text-xs uppercase tracking-wide text-[var(--foreground-mute)] font-medium mb-2">Last 12 weeks</div>
-          <CalendarHeatmap counts={dayCounts} weeks={12} />
-        </Card>
-      )}
+      <Card className="mb-4 overflow-x-auto">
+        <div className="text-xs uppercase tracking-wide text-[var(--foreground-mute)] font-medium mb-2">Last 12 weeks</div>
+        <CalendarHeatmap counts={dayCounts} weeks={12} />
+      </Card>
 
       {days.length === 0 ? (
         <p className="text-sm text-[var(--color-foreground)]/60">

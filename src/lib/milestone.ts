@@ -5,24 +5,29 @@
 export function effectiveMilestoneStart(
   storedStart: Date,
   defaultStartDay: number,
-  now: Date = new Date()
+  now: Date = new Date(),
+  groupTimezone: string = "America/New_York"
 ): Date {
-  // Walk forward in 7-day steps from storedStart on the default_start_day
-  // until we pass `now`, then back off one week.
-  const ms = 24 * 60 * 60 * 1000;
-  const start = new Date(storedStart);
-  // Snap start to its weekday at midnight (local server time)
-  start.setHours(0, 0, 0, 0);
+  // Get today's date in the group's timezone (as YYYY-MM-DD)
+  const fmt = new Intl.DateTimeFormat("en-CA", {
+    timeZone: groupTimezone,
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  });
+  const todayStr = fmt.format(now);
 
-  // Find the most recent occurrence of default_start_day that is <= now,
-  // but not earlier than storedStart.
-  const today = new Date(now);
-  today.setHours(0, 0, 0, 0);
-  const dow = today.getDay();
+  // Parse the date in UTC to get midnight UTC for today's group-timezone date
+  const todayUtc = new Date(`${todayStr}T00:00:00Z`);
+  const dow = todayUtc.getUTCDay();
+
+  // Calculate days back to the most recent occurrence of defaultStartDay
   const daysBack = (dow - defaultStartDay + 7) % 7;
-  const lastRollover = new Date(today.getTime() - daysBack * ms);
+  const ms = 24 * 60 * 60 * 1000;
+  const lastRollover = new Date(todayUtc.getTime() - daysBack * ms);
 
-  return lastRollover > start ? lastRollover : start;
+  // Use the later of the calculated rollover or the original stored start
+  return lastRollover > storedStart ? lastRollover : storedStart;
 }
 
 export function todayDateString(d: Date = new Date()): string {

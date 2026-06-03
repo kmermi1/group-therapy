@@ -179,9 +179,8 @@ export async function editPlanAction(formData: FormData) {
     // If shrinking units_per_day, release allocations that fall outside the new bound.
     if (newUnitsPerDay < plan.units_per_day) {
       try {
-        const { todayPlanDay: tpd } = await import("@/lib/plans");
         const startDateStr = String(plan.start_date).slice(0, 10);
-        const planDay = Math.max(1, tpd(startDateStr));
+        const planDay = Math.max(1, todayPlanDay(startDateStr));
         const { data: badAllocs, error: allocError } = await sb
           .from("reading_plan_allocations")
           .select("id, from_day, end_unit")

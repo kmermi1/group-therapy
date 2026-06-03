@@ -59,7 +59,7 @@ export default function AdminResetPasswordForm() {
           id="newPassword"
           name="newPassword"
           type="password"
-          placeholder="6+ characters"
+          placeholder="Minimum 6 characters"
           required
           minLength={6}
         />

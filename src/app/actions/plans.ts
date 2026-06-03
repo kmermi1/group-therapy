@@ -240,11 +240,21 @@ export async function openPlanAction(formData: FormData) {
   const admin = await requireAdmin();
   const planId = String(formData.get("planId") || "");
   const sb = createAdminClient();
+
+  // Set plan back to active
   await sb
     .from("reading_plans")
     .update({ status: "active", closed_at: null })
     .eq("id", planId)
     .eq("group_id", admin.groupId);
+
+  // Restore allocations by clearing to_day (members' previous choices)
+  await sb
+    .from("reading_plan_allocations")
+    .update({ to_day: null })
+    .eq("plan_id", planId)
+    .not("to_day", "is", null);
+
   revalidatePath("/admin/plans");
   revalidatePath(`/plans/${planId}`);
   revalidatePath("/today");

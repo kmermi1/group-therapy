@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useTransition } from "react";
+import Link from "next/link";
 import { Button, Input, Label } from "@/components/ui";
 import { loginAdminAction, loginUserAction } from "@/app/actions/auth";
 
@@ -49,6 +50,14 @@ export default function LoginForm({ isAdmin }: { isAdmin: boolean }) {
       <Button type="submit" className="w-full" disabled={pending}>
         {pending ? "Signing in..." : "Log in"}
       </Button>
+      {isAdmin && (
+        <Link
+          href="/admin-reset-password"
+          className="block text-center text-sm text-[var(--color-accent)]"
+        >
+          Forgot password?
+        </Link>
+      )}
     </form>
   );
 }

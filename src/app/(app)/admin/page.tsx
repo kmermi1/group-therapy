@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { requireAdmin, rotateAdminInviteAction } from "@/app/actions/auth";
 import { createAdminClient } from "@/lib/supabase/server";
 import {
@@ -99,6 +100,19 @@ export default async function AdminDashboardPage() {
         <form action={rotateAdminInviteAction} className="mt-3">
           <button className="text-xs text-red-500 underline">Rotate code (invalidate old)</button>
         </form>
+      </Card>
+
+      <Card className="mb-4">
+        <h2 className="font-semibold mb-2">Admin Settings</h2>
+        <p className="text-xs text-[var(--color-foreground)]/60 mb-3">
+          Manage admin credentials and generate password reset codes.
+        </p>
+        <Link
+          href="/admin/settings"
+          className="block w-full text-center bg-[var(--color-card)] border border-[var(--color-border)] rounded-lg px-4 py-2.5 text-sm font-medium hover:bg-[var(--color-background)]"
+        >
+          Go to admin settings
+        </Link>
       </Card>
 
       <Card className="mb-4">

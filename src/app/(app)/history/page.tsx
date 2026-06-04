@@ -99,12 +99,41 @@ export default async function HistoryPage() {
     if (items.length > 0) days.push({ date, items });
   }
 
+  // Get user's reading plans with allocations
+  const { data: allocations } = await sb
+    .from("reading_plan_allocations")
+    .select("id, plan_id, start_unit, end_unit, reading_plans!inner(id, name, status, units_per_day)")
+    .eq("user_id", user.userId)
+    .is("to_day", null)
+    .order("created_at", { ascending: false });
+
   return (
     <main className="max-w-md mx-auto w-full px-5 py-6 reveal">
       <PageHeader title={tr("historyTitle")} subtitle={tr("historySubtitle")} />
       <form action={userResetHistoryAction} className="mb-4">
         <button className="text-xs text-[var(--danger)] hover:underline">{tr("resetMyHistory")}</button>
       </form>
+
+      {allocations && allocations.length > 0 && (
+        <Card className="mb-4">
+          <div className="text-xs uppercase tracking-wide text-[var(--foreground-mute)] font-medium mb-3">Reading plans</div>
+          <div className="space-y-2">
+            {allocations.map((alloc: any) => (
+              <div key={alloc.id} className="p-2 rounded border border-[var(--color-border)] bg-[var(--color-card)]/50">
+                <div className="font-medium text-sm">{alloc.reading_plans.name}</div>
+                {alloc.start_unit && alloc.end_unit && (
+                  <div className="text-xs text-[var(--color-foreground)]/60 mt-1">
+                    Units {alloc.start_unit}–{alloc.end_unit}
+                  </div>
+                )}
+                <div className="text-xs text-[var(--color-foreground)]/60 mt-1">
+                  Status: <span className="capitalize">{alloc.reading_plans.status}</span>
+                </div>
+              </div>
+            ))}
+          </div>
+        </Card>
+      )}
 
       <Card className="mb-4 overflow-x-auto">
         <div className="text-xs uppercase tracking-wide text-[var(--foreground-mute)] font-medium mb-2">Last 12 weeks</div>

@@ -16,24 +16,22 @@ export default function HistoryDayRow({
   forDate: string;
   done: boolean;
 }) {
-  const [optimistic, setOptimistic] = useState(done);
+  const [isDone, setIsDone] = useState(done);
   const [pending, start] = useTransition();
 
   function toggle() {
-    const newState = !optimistic;
-    console.log("Toggling task", taskId, "for", forDate, "to", newState);
-    setOptimistic(newState);
+    const newState = !isDone;
+    setIsDone(newState);
     const fd = new FormData();
     fd.set("taskId", taskId);
     fd.set("forDate", forDate);
     start(async () => {
       try {
-        console.log("Sending toggleCompletionAction...");
-        const result = await toggleCompletionAction(fd);
-        console.log("toggleCompletionAction result:", result);
+        await toggleCompletionAction(fd);
+        // After action completes, state should update from revalidatePath
       } catch (e) {
-        // Revert optimistic state on error
-        setOptimistic(!newState);
+        // Revert on error
+        setIsDone(!newState);
         console.error("Failed to toggle completion:", e);
       }
     });
@@ -45,15 +43,15 @@ export default function HistoryDayRow({
         onClick={toggle}
         disabled={pending}
         className={`h-5 w-5 rounded border-2 flex items-center justify-center shrink-0 ${
-          optimistic
+          isDone
             ? "bg-[var(--color-accent)] border-[var(--color-accent)] text-[var(--color-accent-fg)]"
             : "border-[var(--color-border)]"
         }`}
-        aria-label={optimistic ? "Unmark this day" : "Mark this day done"}
+        aria-label={isDone ? "Unmark this day" : "Mark this day done"}
       >
-        {optimistic ? "✓" : ""}
+        {isDone ? "✓" : ""}
       </button>
-      <span className={`flex-1 ${optimistic ? "line-through opacity-60" : ""}`}>{title}</span>
+      <span className={`flex-1 ${isDone ? "line-through opacity-60" : ""}`}>{title}</span>
       <span className="text-[10px] uppercase tracking-wide text-[var(--color-foreground)]/50">{frequency}</span>
     </li>
   );

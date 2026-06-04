@@ -30,9 +30,12 @@ export function effectiveMilestoneStart(
   return lastRollover > storedStart ? lastRollover : storedStart;
 }
 
-export function todayDateString(d: Date = new Date()): string {
-  const yyyy = d.getFullYear();
-  const mm = String(d.getMonth() + 1).padStart(2, "0");
-  const dd = String(d.getDate()).padStart(2, "0");
-  return `${yyyy}-${mm}-${dd}`;
+export function todayDateString(d: Date = new Date(), groupTimezone: string = "America/New_York"): string {
+  const fmt = new Intl.DateTimeFormat("en-CA", {
+    timeZone: groupTimezone,
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  });
+  return fmt.format(d);
 }

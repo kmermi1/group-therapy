@@ -21,13 +21,16 @@ export default function HistoryDayRow({
 
   function toggle() {
     const newState = !optimistic;
+    console.log("Toggling task", taskId, "for", forDate, "to", newState);
     setOptimistic(newState);
     const fd = new FormData();
     fd.set("taskId", taskId);
     fd.set("forDate", forDate);
     start(async () => {
       try {
-        await toggleCompletionAction(fd);
+        console.log("Sending toggleCompletionAction...");
+        const result = await toggleCompletionAction(fd);
+        console.log("toggleCompletionAction result:", result);
       } catch (e) {
         // Revert optimistic state on error
         setOptimistic(!newState);

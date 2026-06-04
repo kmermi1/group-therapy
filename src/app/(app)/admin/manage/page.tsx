@@ -25,7 +25,7 @@ export default async function AdminManagePage() {
 
   return (
     <main className="max-w-md mx-auto w-full px-5 py-6">
-      <PageHeader title="Manage" />
+      <PageHeader title="Tasks" />
 
       <Card className="mb-4">
         <h2 className="font-semibold mb-3">Add task</h2>

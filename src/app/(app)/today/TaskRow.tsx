@@ -108,6 +108,11 @@ export default function TaskRow({
                 {optimisticCount}/{target}{isLongTerm ? ` ${tr("allTime")}` : ""}
               </span>
             )}
+            {target === 1 && (
+              <span className={`text-[10px] px-2 py-0.5 rounded-md ${isDone ? "bg-emerald-500/15 text-emerald-600 dark:text-emerald-300" : "bg-amber-500/15 text-amber-600 dark:text-amber-300"}`}>
+                {isDone ? "✓ Done" : "⚠ Need 1"}
+              </span>
+            )}
           </div>
           {task.description && (
             <p className="text-sm text-[var(--foreground-mute)] mt-1 leading-relaxed">{task.description}</p>

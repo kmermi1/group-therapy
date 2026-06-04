@@ -1,7 +1,7 @@
 "use client";
 
 import { toggleCompletionAction, archivePersonalTaskAction } from "@/app/actions/tasks";
-import { useState, useTransition } from "react";
+import { useState, useTransition, useEffect } from "react";
 import { t, type Locale } from "@/lib/i18n";
 
 type Task = {
@@ -44,16 +44,36 @@ export default function TaskRow({
 
   const metTarget = optimisticCount >= target;
 
+  // Sync optimistic state with server props when transition completes
+  useEffect(() => {
+    if (!pending) {
+      console.log("Transition completed. Server props - doneToday:", doneToday, "count:", count);
+      console.log("Current optimistic state - done:", optimisticDone, "count:", optimisticCount);
+      setOptimisticDone(doneToday);
+      setOptimisticCount(count);
+    }
+  }, [pending]);
+
   function onToggle() {
     const willBeDone = !optimisticDone;
+    console.log("Toggle:", task.title, "willBeDone:", willBeDone, "current count:", optimisticCount, "target:", target);
     setOptimisticDone(willBeDone);
-    setOptimisticCount((c) => Math.max(0, willBeDone ? c + 1 : c - 1));
+    setOptimisticCount((c) => {
+      const newCount = Math.max(0, willBeDone ? c + 1 : c - 1);
+      console.log("Count update:", c, "->", newCount);
+      return newCount;
+    });
     const fd = new FormData();
     fd.set("taskId", task.id);
     fd.set("forDate", forDate);
     start(async () => {
-      try { await toggleCompletionAction(fd); }
-      catch {
+      try {
+        console.log("Calling toggleCompletionAction...");
+        await toggleCompletionAction(fd);
+        console.log("toggleCompletionAction succeeded");
+      }
+      catch (e) {
+        console.log("toggleCompletionAction failed:", e);
         setOptimisticDone(!willBeDone);
         setOptimisticCount((c) => (willBeDone ? c - 1 : c + 1));
       }

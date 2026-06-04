@@ -43,12 +43,11 @@ export default function TaskRow({
   const [showImage, setShowImage] = useState(false);
 
   const metTarget = optimisticCount >= target;
+  const isDone = optimisticDone;
 
   // Sync optimistic state with server props when transition completes
   useEffect(() => {
     if (!pending) {
-      console.log("Transition completed. Server props - doneToday:", doneToday, "count:", count);
-      console.log("Current optimistic state - done:", optimisticDone, "count:", optimisticCount);
       setOptimisticDone(doneToday);
       setOptimisticCount(count);
     }
@@ -56,24 +55,16 @@ export default function TaskRow({
 
   function onToggle() {
     const willBeDone = !optimisticDone;
-    console.log("Toggle:", task.title, "willBeDone:", willBeDone, "current count:", optimisticCount, "target:", target);
     setOptimisticDone(willBeDone);
-    setOptimisticCount((c) => {
-      const newCount = Math.max(0, willBeDone ? c + 1 : c - 1);
-      console.log("Count update:", c, "->", newCount);
-      return newCount;
-    });
+    setOptimisticCount((c) => Math.max(0, willBeDone ? c + 1 : c - 1));
     const fd = new FormData();
     fd.set("taskId", task.id);
     fd.set("forDate", forDate);
     start(async () => {
       try {
-        console.log("Calling toggleCompletionAction...");
         await toggleCompletionAction(fd);
-        console.log("toggleCompletionAction succeeded");
       }
-      catch (e) {
-        console.log("toggleCompletionAction failed:", e);
+      catch {
         setOptimisticDone(!willBeDone);
         setOptimisticCount((c) => (willBeDone ? c - 1 : c + 1));
       }
@@ -106,7 +97,7 @@ export default function TaskRow({
         </button>
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2 flex-wrap">
-            <h3 className={`font-semibold text-[15px] ${metTarget ? "line-through opacity-50" : ""}`}>
+            <h3 className={`font-semibold text-[15px] ${isDone ? "line-through opacity-50" : ""}`}>
               {task.title}
             </h3>
             <span className={`text-[10px] uppercase tracking-wide px-2 py-0.5 rounded-md font-medium ${badgeClass}`}>

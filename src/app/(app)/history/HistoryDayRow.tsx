@@ -20,13 +20,19 @@ export default function HistoryDayRow({
   const [pending, start] = useTransition();
 
   function toggle() {
-    setOptimistic((v) => !v);
+    const newState = !optimistic;
+    setOptimistic(newState);
     const fd = new FormData();
     fd.set("taskId", taskId);
     fd.set("forDate", forDate);
     start(async () => {
-      try { await toggleCompletionAction(fd); }
-      catch { setOptimistic((v) => !v); }
+      try {
+        await toggleCompletionAction(fd);
+      } catch (e) {
+        // Revert optimistic state on error
+        setOptimistic(!newState);
+        console.error("Failed to toggle completion:", e);
+      }
     });
   }
 

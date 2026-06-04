@@ -6,6 +6,8 @@ import Link from "next/link";
 import { t } from "@/lib/i18n";
 import { ProgressBar } from "@/components/charts/ProgressBar";
 
+export const revalidate = 0;
+
 export default async function LeaderboardPage({
   searchParams,
 }: {

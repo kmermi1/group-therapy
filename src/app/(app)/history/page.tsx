@@ -2,6 +2,7 @@ import { requireUser } from "@/app/actions/auth";
 import { createAdminClient } from "@/lib/supabase/server";
 import { PageHeader, Card } from "@/components/ui";
 import { userResetHistoryAction } from "@/app/actions/tasks";
+import { markReadingDayAction, unmarkReadingDayAction } from "@/app/actions/reading";
 import { t } from "@/lib/i18n";
 import { CalendarHeatmap } from "@/components/charts/CalendarHeatmap";
 import HistoryDayRow from "./HistoryDayRow";
@@ -107,6 +108,36 @@ export default async function HistoryPage() {
     .is("to_day", null)
     .order("created_at", { ascending: false });
 
+  // Get reading completion data for each allocation
+  let allocationCompletions: Record<string, string[]> = {};
+  if (allocations && allocations.length > 0) {
+    const { data: completions } = await sb
+      .from("reading_plan_daily_completion")
+      .select("allocation_id, completed_for_date")
+      .eq("user_id", user.userId)
+      .in(
+        "allocation_id",
+        allocations.map((a) => a.id)
+      );
+
+    if (completions) {
+      allocationCompletions = completions.reduce(
+        (acc, c) => {
+          if (!acc[c.allocation_id]) acc[c.allocation_id] = [];
+          acc[c.allocation_id].push(c.completed_for_date);
+          return acc;
+        },
+        {} as Record<string, string[]>
+      );
+    }
+  }
+
+  // Add completions to allocations
+  const allocationsWithCompletions = allocations?.map((a) => ({
+    ...a,
+    _completions: allocationCompletions[a.id] || [],
+  }));
+
   return (
     <main className="max-w-md mx-auto w-full px-5 py-6 reveal">
       <PageHeader title={tr("historyTitle")} subtitle={tr("historySubtitle")} />
@@ -114,25 +145,58 @@ export default async function HistoryPage() {
         <button className="text-xs text-[var(--danger)] hover:underline">{tr("resetMyHistory")}</button>
       </form>
 
-      {allocations && allocations.length > 0 && (
-        <Card className="mb-4">
+      {allocationsWithCompletions && allocationsWithCompletions.length > 0 && (
+        <>
           <div className="text-xs uppercase tracking-wide text-[var(--foreground-mute)] font-medium mb-3">Reading plans</div>
-          <div className="space-y-2">
-            {allocations.map((alloc: any) => (
-              <div key={alloc.id} className="p-2 rounded border border-[var(--color-border)] bg-[var(--color-card)]/50">
-                <div className="font-medium text-sm">{alloc.reading_plans.name}</div>
+          {allocationsWithCompletions.map((alloc: any) => {
+            const planId = alloc.reading_plans.id;
+            const allocId = alloc.id;
+
+            return (
+              <Card key={allocId} className="mb-4">
+                <div className="font-medium text-sm mb-2">{alloc.reading_plans.name}</div>
                 {alloc.start_unit && alloc.end_unit && (
-                  <div className="text-xs text-[var(--color-foreground)]/60 mt-1">
+                  <div className="text-xs text-[var(--color-foreground)]/60 mb-2">
                     Units {alloc.start_unit}–{alloc.end_unit}
                   </div>
                 )}
-                <div className="text-xs text-[var(--color-foreground)]/60 mt-1">
+                <div className="text-xs text-[var(--color-foreground)]/60 mb-3">
                   Status: <span className="capitalize">{alloc.reading_plans.status}</span>
                 </div>
-              </div>
-            ))}
-          </div>
-        </Card>
+
+                {alloc.reading_plans.status === "active" && (
+                  <div className="space-y-1">
+                    <div className="text-xs text-[var(--color-foreground)]/70 mb-2">Mark days as read:</div>
+                    {days.slice(0, 7).map(({ date }) => {
+                      const isCompleted = alloc._completions?.includes(date);
+                      return (
+                        <div key={`${allocId}-${date}`} className="flex items-center gap-2">
+                          <form
+                            action={isCompleted ? unmarkReadingDayAction : markReadingDayAction}
+                            className="flex items-center gap-2"
+                          >
+                            <input type="hidden" name="allocationId" value={allocId} />
+                            <input type="hidden" name="forDate" value={date} />
+                            <button
+                              type="submit"
+                              className={`flex-1 px-2 py-1 text-xs rounded border text-left transition-colors ${
+                                isCompleted
+                                  ? "bg-[var(--color-accent)] border-[var(--color-accent)] text-[var(--color-accent-fg)]"
+                                  : "border-[var(--color-border)] bg-[var(--color-card)] hover:bg-[var(--color-card)]/70"
+                              }`}
+                            >
+                              {date}
+                            </button>
+                          </form>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+              </Card>
+            );
+          })}
+        </>
       )}
 
       <Card className="mb-4 overflow-x-auto">

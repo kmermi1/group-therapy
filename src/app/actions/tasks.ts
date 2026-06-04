@@ -89,62 +89,81 @@ export async function archivePersonalTaskAction(formData: FormData) {
 }
 
 export async function editTaskAction(formData: FormData) {
-  const admin = await requireAdmin();
-  const taskId = String(formData.get("taskId") || "");
-  const title = String(formData.get("title") || "").trim();
-  const description = String(formData.get("description") || "").trim() || null;
-  const frequency = String(formData.get("frequency") || "daily") as "daily" | "weekly";
-  const target = Math.max(1, Number(formData.get("target") || 1));
-  const totalRaw = String(formData.get("totalTarget") || "").trim();
-  const totalTarget = totalRaw === "" ? null : Math.max(1, Number(totalRaw));
-  const assigneeRaw = String(formData.get("assigneeUserId") || "");
-  const assigneeUserId = assigneeRaw === "all" || assigneeRaw === "" ? null : assigneeRaw;
-  const removeImage = formData.get("removeImage") === "on";
-  const image = formData.get("image") as File | null;
+  try {
+    const admin = await requireAdmin();
+    const taskId = String(formData.get("taskId") || "");
+    const title = String(formData.get("title") || "").trim();
+    const description = String(formData.get("description") || "").trim() || null;
+    const frequency = String(formData.get("frequency") || "daily") as "daily" | "weekly";
+    const target = Math.max(1, Number(formData.get("target") || 1));
+    const totalRaw = String(formData.get("totalTarget") || "").trim();
+    const totalTarget = totalRaw === "" ? null : Math.max(1, Number(totalRaw));
+    const assigneeRaw = String(formData.get("assigneeUserId") || "");
+    const assigneeUserId = assigneeRaw === "all" || assigneeRaw === "" ? null : assigneeRaw;
+    const removeImage = formData.get("removeImage") === "on";
+    const image = formData.get("image") as File | null;
 
-  if (!taskId || !title) throw new Error("Title required.");
+    console.log("editTaskAction: image file:", image?.name, "size:", image?.size, "type:", image?.type);
 
-  const sb = createAdminClient();
-  const { data: existing } = await sb.from("tasks").select("id, group_id, image_path").eq("id", taskId).single();
-  if (!existing || existing.group_id !== admin.groupId) throw new Error("Task not found.");
+    if (!taskId || !title) throw new Error("Title required.");
 
-  let image_path: string | null | undefined = undefined;
-  if (image && image.size > 0) {
-    const ext = (image.name.split(".").pop() || "bin").toLowerCase();
-    const path = `${admin.groupId}/${crypto.randomUUID()}.${ext}`;
-    const buf = Buffer.from(await image.arrayBuffer());
-    const { error } = await sb.storage.from("task-images").upload(path, buf, {
-      contentType: image.type || "application/octet-stream",
-      upsert: false,
-    });
-    if (error) throw new Error("Image upload failed: " + error.message);
-    image_path = path;
-    if (existing.image_path) {
-      await sb.storage.from("task-images").remove([existing.image_path]).catch(() => undefined);
+    const sb = createAdminClient();
+    const { data: existing } = await sb.from("tasks").select("id, group_id, image_path").eq("id", taskId).single();
+    if (!existing || existing.group_id !== admin.groupId) throw new Error("Task not found.");
+
+    let image_path: string | null | undefined = undefined;
+    if (image && image.size > 0) {
+      console.log("Uploading image:", image.name);
+      const ext = (image.name.split(".").pop() || "bin").toLowerCase();
+      const path = `${admin.groupId}/${crypto.randomUUID()}.${ext}`;
+      const buf = Buffer.from(await image.arrayBuffer());
+      console.log("Image buffer size:", buf.length);
+      const { error } = await sb.storage.from("task-images").upload(path, buf, {
+        contentType: image.type || "application/octet-stream",
+        upsert: false,
+      });
+      if (error) {
+        console.error("Upload error:", error);
+        throw new Error("Image upload failed: " + error.message);
+      }
+      console.log("Image uploaded successfully:", path);
+      image_path = path;
+      if (existing.image_path) {
+        await sb.storage.from("task-images").remove([existing.image_path]).catch(() => undefined);
+      }
+    } else if (removeImage) {
+      console.log("Removing image");
+      image_path = null;
+      if (existing.image_path) {
+        await sb.storage.from("task-images").remove([existing.image_path]).catch(() => undefined);
+      }
     }
-  } else if (removeImage) {
-    image_path = null;
-    if (existing.image_path) {
-      await sb.storage.from("task-images").remove([existing.image_path]).catch(() => undefined);
+
+    const update: Record<string, unknown> = {
+      title,
+      description,
+      frequency,
+      target_per_milestone: target,
+      total_target: totalTarget,
+      assignee_user_id: assigneeUserId,
+    };
+    if (image_path !== undefined) update.image_path = image_path;
+
+    console.log("Updating task with:", Object.keys(update));
+    const { error } = await sb.from("tasks").update(update).eq("id", taskId);
+    if (error) {
+      console.error("Update error:", error);
+      throw new Error(error.message);
     }
+
+    console.log("Task updated successfully");
+    revalidatePath("/admin/manage");
+    revalidatePath("/today");
+    redirect("/admin/manage");
+  } catch (e) {
+    console.error("editTaskAction error:", e);
+    throw e;
   }
-
-  const update: Record<string, unknown> = {
-    title,
-    description,
-    frequency,
-    target_per_milestone: target,
-    total_target: totalTarget,
-    assignee_user_id: assigneeUserId,
-  };
-  if (image_path !== undefined) update.image_path = image_path;
-
-  const { error } = await sb.from("tasks").update(update).eq("id", taskId);
-  if (error) throw new Error(error.message);
-
-  revalidatePath("/admin/manage");
-  revalidatePath("/today");
-  redirect("/admin/manage");
 }
 
 export async function archiveTaskAction(formData: FormData) {

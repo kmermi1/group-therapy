@@ -21,7 +21,7 @@ export default async function EditTaskPage({ params }: { params: Promise<{ taskI
   return (
     <main className="max-w-md mx-auto w-full px-5 py-6">
       <PageHeader title="Edit task" />
-      <form action={editTaskAction} encType="multipart/form-data" className="space-y-4">
+      <form action={editTaskAction} className="space-y-4">
         <input type="hidden" name="taskId" value={task.id} />
 
         <Card className="space-y-3">

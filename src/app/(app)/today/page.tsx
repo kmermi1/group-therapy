@@ -6,7 +6,7 @@ import { PageHeader } from "@/components/ui";
 import TaskRow from "./TaskRow";
 import AddPersonalTask from "./AddPersonalTask";
 import PlanCard from "./PlanCard";
-import { todayPlanDay, dayLabel, rangesActiveOnDay, formatRanges, isWithinSchedule, extraOwedOnDay } from "@/lib/plans";
+import { todayPlanDay, dayLabel, rangesActiveOnDay, formatRanges, isWithinSchedule, extraOwedOnDay, planDayForDate } from "@/lib/plans";
 import { t } from "@/lib/i18n";
 
 function SectionHeader({ icon, title, desc, count }: { icon: string; title: string; desc: string; count: number }) {
@@ -113,12 +113,12 @@ export default async function TodayPage() {
       .eq("user_id", user.userId);
 
     const { data: myComps } = await sb
-      .from("reading_plan_completions")
-      .select("plan_day")
-      .eq("plan_id", plan.id)
-      .eq("user_id", user.userId);
+      .from("reading_plan_daily_completion")
+      .select("completed_for_date")
+      .eq("user_id", user.userId)
+      .in("allocation_id", (myAllocs ?? []).map(a => a.id));
 
-    const completedSet = new Set((myComps ?? []).map((c) => c.plan_day));
+    const completedSet = new Set((myComps ?? []).map((c) => planDayForDate(plan.start_date, c.completed_for_date)));
 
     const todayAllocs = rangesActiveOnDay(myAllocs ?? [], pd);
     const todayRangeAllocs = todayAllocs.filter((a) => !a.extra_id && a.start_unit != null && a.end_unit != null);

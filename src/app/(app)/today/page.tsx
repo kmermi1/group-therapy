@@ -28,7 +28,7 @@ export default async function TodayPage() {
   const user = await requireUser();
   const sb = createAdminClient();
   const today = todayDateString();
-  const { milestoneStart } = await getMilestoneBounds(user.groupId);
+  const { milestoneStart, group } = await getMilestoneBounds(user.groupId);
 
   const { data: tasks } = await sb
     .from("tasks")
@@ -52,12 +52,26 @@ export default async function TodayPage() {
   const milestoneCounts: Record<string, number> = {};
   const totalCounts: Record<string, number> = {};
   const doneTodaySet = new Set<string>();
+  const doneThisWeekSet = new Set<string>();
+
+  // Calculate start of week based on group's default_start_day
+  const todayDate = new Date(today + "T00:00:00Z");
+  const dayOfWeek = todayDate.getUTCDay();
+  const startDay = group.default_start_day || 3; // Default to Wednesday if not set
+  const daysBack = (dayOfWeek - startDay + 7) % 7;
+  const weekStartDate = new Date(todayDate);
+  weekStartDate.setUTCDate(weekStartDate.getUTCDate() - daysBack);
+  const weekStartStr = weekStartDate.toISOString().slice(0, 10);
+
   for (const c of completions ?? []) {
     totalCounts[c.task_id] = (totalCounts[c.task_id] || 0) + 1;
     if (c.completed_for_date >= milestoneStartStr) {
       milestoneCounts[c.task_id] = (milestoneCounts[c.task_id] || 0) + 1;
     }
     if (c.completed_for_date === today) doneTodaySet.add(c.task_id);
+    if (c.completed_for_date >= weekStartStr && c.completed_for_date <= today) {
+      doneThisWeekSet.add(c.task_id);
+    }
   }
 
   const signed: Record<string, string> = {};
@@ -222,15 +236,19 @@ export default async function TodayPage() {
                   const isLongTerm = !!t.total_target;
                   const count = isLongTerm ? (totalCounts[t.id] || 0) : (milestoneCounts[t.id] || 0);
                   const target = isLongTerm ? t.total_target! : t.target_per_milestone;
+                  const isWeekly = t.frequency === "weekly";
                   const doneToday = doneTodaySet.has(t.id);
+                  const doneThisWeek = doneThisWeekSet.has(t.id);
+                  const statusForDisplay = isWeekly ? doneThisWeek : doneToday;
                   return (
                     <TaskRow
                       key={t.id}
                       task={t}
-                      doneToday={doneToday}
+                      doneToday={statusForDisplay}
                       count={count}
                       target={target}
                       isLongTerm={isLongTerm}
+                      isWeekly={isWeekly}
                       forDate={today}
                       imageUrl={signed[t.id]}
                       badgeText={label.badgeText}

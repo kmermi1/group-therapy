@@ -18,6 +18,7 @@ export default function TaskRow({
   target,
   isLongTerm,
   isWeekly,
+  doneThisWeek,
   forDate,
   imageUrl,
   badgeText,
@@ -31,6 +32,7 @@ export default function TaskRow({
   target: number;
   isLongTerm?: boolean;
   isWeekly?: boolean;
+  doneThisWeek?: boolean;
   forDate: string;
   imageUrl?: string;
   badgeText: string;
@@ -110,9 +112,19 @@ export default function TaskRow({
                 {optimisticCount}/{target}{isLongTerm ? ` ${tr("allTime")}` : ""}
               </span>
             )}
-            {target === 1 && (
-              <span className={`text-[10px] px-2 py-0.5 rounded-md ${isDone ? "bg-emerald-500/15 text-emerald-600 dark:text-emerald-300" : "bg-blue-500/15 text-blue-600 dark:text-blue-300"}`}>
-                {isDone ? (isWeekly ? "✓ Done this week" : "✓ Done today") : (isWeekly ? "📋 Complete this week" : "⚠ Need today")}
+            {target === 1 && isDone && (
+              <span className="text-[10px] px-2 py-0.5 rounded-md bg-emerald-500/15 text-emerald-600 dark:text-emerald-300">
+                ✓ Done today
+              </span>
+            )}
+            {target === 1 && !isDone && isWeekly && doneThisWeek && (
+              <span className="text-[10px] px-2 py-0.5 rounded-md bg-slate-500/15 text-slate-600 dark:text-slate-300">
+                ✓ Done this week
+              </span>
+            )}
+            {target === 1 && !isDone && !isWeekly && (
+              <span className="text-[10px] px-2 py-0.5 rounded-md bg-amber-500/15 text-amber-600 dark:text-amber-300">
+                ⚠ Need today
               </span>
             )}
           </div>

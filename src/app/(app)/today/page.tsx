@@ -239,16 +239,16 @@ export default async function TodayPage() {
                   const isWeekly = t.frequency === "weekly";
                   const doneToday = doneTodaySet.has(t.id);
                   const doneThisWeek = doneThisWeekSet.has(t.id);
-                  const statusForDisplay = isWeekly ? doneThisWeek : doneToday;
                   return (
                     <TaskRow
                       key={t.id}
                       task={t}
-                      doneToday={statusForDisplay}
+                      doneToday={doneToday}
                       count={count}
                       target={target}
                       isLongTerm={isLongTerm}
                       isWeekly={isWeekly}
+                      doneThisWeek={doneThisWeek}
                       forDate={today}
                       imageUrl={signed[t.id]}
                       badgeText={label.badgeText}

@@ -183,9 +183,11 @@ export async function toggleCompletionAction(formData: FormData) {
   const user = await requireUser();
   await bumpLastSeen(user.userId);
   const taskId = String(formData.get("taskId") || "");
-  const forDate = String(formData.get("forDate") || todayDateString());
 
   const sb = createAdminClient();
+  const { data: group } = await sb.from("groups").select("timezone").eq("id", user.groupId).single();
+  const groupTimezone = group?.timezone || "America/New_York";
+  const forDate = String(formData.get("forDate") || todayDateString(new Date(), groupTimezone));
   // confirm task belongs to user's group + is assigned to them or all
   const { data: task } = await sb
     .from("tasks")
@@ -362,6 +364,7 @@ export async function updateMilestoneSettingsAction(formData: FormData) {
   const admin = await requireAdmin();
   const milestoneStartDate = String(formData.get("milestoneStartDate") || "").trim();
   const startDay = Number(formData.get("startDay") ?? 3);
+  const timezone = String(formData.get("timezone") || "America/New_York").trim();
 
   if (!milestoneStartDate) {
     throw new Error("Milestone start date is required.");
@@ -370,11 +373,13 @@ export async function updateMilestoneSettingsAction(formData: FormData) {
   const sb = createAdminClient();
   const { error } = await sb
     .from("groups")
-    .update({ milestone_started_at: `${milestoneStartDate}T00:00:00+00`, default_start_day: startDay })
+    .update({ milestone_started_at: `${milestoneStartDate}T00:00:00+00`, default_start_day: startDay, timezone })
     .eq("id", admin.groupId);
 
   if (error) throw new Error(error.message || "Failed to update milestone settings");
   revalidatePath("/admin/settings");
+  revalidatePath("/today");
+  revalidatePath("/history");
 }
 
 export { todayDateString };

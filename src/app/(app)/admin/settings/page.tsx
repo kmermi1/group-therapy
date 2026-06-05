@@ -6,6 +6,23 @@ import AdminResetCodeForm from "./AdminResetCodeForm";
 import { updateMilestoneSettingsAction } from "@/app/actions/tasks";
 
 const DAYS = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
+const TIMEZONES = [
+  "America/New_York",
+  "America/Chicago",
+  "America/Denver",
+  "America/Los_Angeles",
+  "America/Anchorage",
+  "Pacific/Honolulu",
+  "Europe/London",
+  "Europe/Paris",
+  "Europe/Istanbul",
+  "Asia/Dubai",
+  "Asia/Kolkata",
+  "Asia/Bangkok",
+  "Asia/Shanghai",
+  "Asia/Tokyo",
+  "Australia/Sydney",
+];
 
 function formatDateForInput(date: Date): string {
   const yyyy = date.getFullYear();
@@ -60,6 +77,18 @@ export default async function AdminSettingsPage() {
               {DAYS.map((d, i) => <option key={i} value={i}>{d}</option>)}
             </select>
             <p className="text-xs text-[var(--color-foreground)]/60 mt-1">Milestones auto-roll on this weekday if you don&apos;t reset manually.</p>
+          </div>
+          <div>
+            <Label htmlFor="timezone">Group timezone</Label>
+            <select
+              id="timezone"
+              name="timezone"
+              defaultValue={group?.timezone ?? "America/New_York"}
+              className="w-full rounded-lg border border-[var(--color-border)] bg-[var(--color-card)] px-3 py-2.5 text-sm"
+            >
+              {TIMEZONES.map((tz) => <option key={tz} value={tz}>{tz}</option>)}
+            </select>
+            <p className="text-xs text-[var(--color-foreground)]/60 mt-1">Used for task dates and reading plan calculations.</p>
           </div>
           <Button type="submit" className="w-full">Update settings</Button>
         </form>

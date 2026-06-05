@@ -9,20 +9,22 @@ import HistoryDayRow from "./HistoryDayRow";
 import { todayInGroupTz, daysBetween } from "@/lib/plans";
 import { getMilestoneBounds } from "@/app/actions/tasks";
 
-function isoNDaysAgo(n: number): string {
-  const today = todayInGroupTz();
-  const d = new Date(`${today}T00:00:00Z`);
-  d.setUTCDate(d.getUTCDate() - n);
-  return d.toISOString().slice(0, 10);
-}
-
 export default async function HistoryPage() {
   const user = await requireUser();
   const sb = createAdminClient();
   const tr = (k: Parameters<typeof t>[0]) => t(k, user.locale);
 
-  const today = todayInGroupTz();
-  const { milestoneStart } = await getMilestoneBounds(user.groupId);
+  const { milestoneStart, group } = await getMilestoneBounds(user.groupId);
+  const timezone = group.timezone || "America/New_York";
+
+  function isoNDaysAgo(n: number): string {
+    const today = todayInGroupTz(new Date(), timezone);
+    const d = new Date(`${today}T00:00:00Z`);
+    d.setUTCDate(d.getUTCDate() - n);
+    return d.toISOString().slice(0, 10);
+  }
+
+  const today = todayInGroupTz(new Date(), timezone);
   const milestoneStartIso = milestoneStart.toISOString().slice(0, 10);
 
   // Always show past 7 days for backfilling, regardless of milestone

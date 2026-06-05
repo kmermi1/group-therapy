@@ -3,9 +3,9 @@
 export const GROUP_TIMEZONE = "America/New_York";
 
 /** Today's date in the group time zone, as YYYY-MM-DD. */
-export function todayInGroupTz(now: Date = new Date()): string {
+export function todayInGroupTz(now: Date = new Date(), timezone: string = GROUP_TIMEZONE): string {
   const fmt = new Intl.DateTimeFormat("en-CA", {
-    timeZone: GROUP_TIMEZONE,
+    timeZone: timezone,
     year: "numeric",
     month: "2-digit",
     day: "2-digit",

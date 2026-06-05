@@ -27,8 +27,9 @@ const BUCKET = "task-images";
 export default async function TodayPage() {
   const user = await requireUser();
   const sb = createAdminClient();
-  const today = todayDateString();
   const { milestoneStart, group } = await getMilestoneBounds(user.groupId);
+  const timezone = group.timezone || "America/New_York";
+  const today = todayDateString(new Date(), timezone);
 
   const { data: tasks } = await sb
     .from("tasks")

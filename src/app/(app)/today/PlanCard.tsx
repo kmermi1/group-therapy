@@ -5,6 +5,11 @@ import Link from "next/link";
 import { togglePlanDayDoneAction } from "@/app/actions/plans";
 import { t, type Locale } from "@/lib/i18n";
 
+function formatDate(dateStr: string): string {
+  const [year, month, day] = dateStr.split("-");
+  return `${month}/${day}/${year}`;
+}
+
 export type PlanCardProps = {
   planId: string;
   planName: string;
@@ -15,7 +20,7 @@ export type PlanCardProps = {
   todayLabel: string | null;
   todayRanges: string | null;
   doneToday: boolean;
-  outstandingDays: { planDay: number; label: string | null; ranges: string; done: boolean }[];
+  outstandingDays: { planDay: number; label: string | null; date: string; ranges: string; done: boolean }[];
   locale: Locale;
 };
 
@@ -113,7 +118,7 @@ export default function PlanCard(props: PlanCardProps) {
                     {d.done ? "✓" : ""}
                   </button>
                   <span className="flex-1 text-[var(--color-foreground)]/80">
-                    {d.label ?? `Day ${d.planDay}`} — {props.unitLabel}s {d.ranges}
+                    {d.label ?? formatDate(d.date)} — {props.unitLabel}s {d.ranges}
                   </span>
                 </li>
               ))}

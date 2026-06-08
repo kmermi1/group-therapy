@@ -162,7 +162,7 @@ export default async function TodayPage() {
         : null;
 
     // outstanding = past days where user had any active allocation and no completion
-    const outstanding: { planDay: number; label: string | null; ranges: string; done: boolean }[] = [];
+    const outstanding: { planDay: number; label: string | null; date: string; ranges: string; done: boolean }[] = [];
     for (let d = 1; d < pd; d++) {
       const dayAllocs = rangesActiveOnDay(myAllocs ?? [], d);
       if (dayAllocs.length === 0) continue;
@@ -179,11 +179,17 @@ export default async function TodayPage() {
         : [];
       if (rangeAllocs.length === 0 && extraNames.length === 0) continue;
       if (completedSet.has(d)) continue;
+
+      const dayDate = new Date(plan.start_date + "T00:00:00Z");
+      dayDate.setUTCDate(dayDate.getUTCDate() + (d - 1));
+      const dateStr = dayDate.toISOString().slice(0, 10);
+
       outstanding.push({
         planDay: d,
         label: plan.schedule === "progressing" && plan.day_label_template && plan.start_at !== null
           ? dayLabel(plan.day_label_template, plan.start_at, d)
           : null,
+        date: dateStr,
         ranges: [
           rangeAllocs.length > 0 ? formatRanges(rangeAllocs as { start_unit: number; end_unit: number }[]) : null,
           ...extraNames,

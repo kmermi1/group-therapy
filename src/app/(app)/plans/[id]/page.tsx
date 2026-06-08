@@ -2,7 +2,7 @@ import { notFound } from "next/navigation";
 import { requireSession } from "@/app/actions/auth";
 import { createAdminClient } from "@/lib/supabase/server";
 import { PageHeader, Card } from "@/components/ui";
-import { todayPlanDay, dayLabel, rangesActiveOnDay, formatRanges } from "@/lib/plans";
+import { todayPlanDay, dayLabel, rangesActiveOnDay, formatRanges, daysBetween } from "@/lib/plans";
 import AllocationGrid from "./AllocationGrid";
 import AdminPlanControls from "./AdminPlanControls";
 import { ProgressRing } from "@/components/charts/ProgressRing";
@@ -34,10 +34,21 @@ export default async function PlanPage({ params }: { params: Promise<{ id: strin
     .eq("plan_id", plan.id)
     .order("position");
 
-  const { data: comps } = await sb
-    .from("reading_plan_completions")
-    .select("user_id, plan_day")
+  // Get completions from the allocation-based table and convert to plan days
+  const { data: allocIds } = await sb
+    .from("reading_plan_allocations")
+    .select("id")
     .eq("plan_id", plan.id);
+
+  const { data: dailyComps } = await sb
+    .from("reading_plan_daily_completion")
+    .select("user_id, completed_for_date")
+    .in("allocation_id", (allocIds ?? []).map(a => a.id));
+
+  const comps = (dailyComps ?? []).map(c => ({
+    user_id: c.user_id,
+    plan_day: daysBetween(plan.start_date, c.completed_for_date) + 1,
+  }));
 
   const planDay = Math.max(1, todayPlanDay(plan.start_date));
   const activeAllocs = (allocs ?? []).filter((a) => a.to_day === null || a.to_day >= planDay);

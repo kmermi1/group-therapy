@@ -4,7 +4,7 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { createAdminClient } from "@/lib/supabase/server";
 import { requireAdmin, requireUser } from "./auth";
-import { todayInGroupTz, todayPlanDay } from "@/lib/plans";
+import { todayInGroupTz, todayPlanDay, daysBetween } from "@/lib/plans";
 
 type ScheduleType = "progressing" | "repeating";
 
@@ -550,27 +550,31 @@ async function maybeAutoClose(planId: string) {
   const sb = createAdminClient();
   const { data: plan } = await sb
     .from("reading_plans")
-    .select("schedule, total_days, status")
+    .select("schedule, total_days, status, start_date")
     .eq("id", planId)
     .single();
   if (!plan || plan.schedule !== "progressing" || !plan.total_days || plan.status !== "active") return;
 
   const { data: allocs } = await sb
     .from("reading_plan_allocations")
-    .select("user_id, from_day, to_day")
+    .select("id, user_id, from_day, to_day")
     .eq("plan_id", planId);
   const { data: comps } = await sb
-    .from("reading_plan_completions")
-    .select("user_id, plan_day")
-    .eq("plan_id", planId);
+    .from("reading_plan_daily_completion")
+    .select("user_id, completed_for_date")
+    .in("allocation_id", (allocs ?? []).map(a => a.id));
 
   const allocsByUser: Record<string, { from_day: number; to_day: number | null }[]> = {};
   for (const a of allocs ?? []) {
     (allocsByUser[a.user_id] ||= []).push({ from_day: a.from_day, to_day: a.to_day });
   }
+
+  // Convert completed_for_date to plan_day
   const compsByUser: Record<string, Set<number>> = {};
+  const startDate = plan.start_date;
   for (const c of comps ?? []) {
-    (compsByUser[c.user_id] ||= new Set()).add(c.plan_day);
+    const planDay = daysBetween(startDate, c.completed_for_date) + 1;
+    (compsByUser[c.user_id] ||= new Set()).add(planDay);
   }
 
   for (const userId of Object.keys(allocsByUser)) {

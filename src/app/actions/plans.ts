@@ -495,32 +495,50 @@ export async function togglePlanDayDoneAction(formData: FormData) {
   const sb = createAdminClient();
   const { data: plan } = await sb
     .from("reading_plans")
-    .select("id, group_id, status")
+    .select("id, group_id, status, start_date")
     .eq("id", planId)
     .single();
   if (!plan || plan.group_id !== user.groupId) throw new Error("Plan not found.");
 
-  const { data: existing } = await sb
-    .from("reading_plan_completions")
+  // Convert plan day to actual calendar date
+  const planStartDate = new Date(plan.start_date + "T00:00:00Z");
+  const completionDate = new Date(planStartDate);
+  completionDate.setUTCDate(completionDate.getUTCDate() + (planDay - 1));
+  const completionDateStr = completionDate.toISOString().slice(0, 10);
+
+  // Get all allocations for this user and plan
+  const { data: allocations } = await sb
+    .from("reading_plan_allocations")
     .select("id")
     .eq("plan_id", planId)
     .eq("user_id", user.userId)
-    .eq("plan_day", planDay)
-    .maybeSingle();
+    .is("to_day", null);
 
-  if (existing) {
-    await sb.from("reading_plan_completions").delete().eq("id", existing.id);
-  } else {
-    await sb.from("reading_plan_completions").insert({
-      plan_id: planId,
-      user_id: user.userId,
-      plan_day: planDay,
-    });
+  if (!allocations || allocations.length === 0) throw new Error("No allocations found.");
+
+  // For each allocation, toggle the completion
+  for (const alloc of allocations) {
+    const { data: existing } = await sb
+      .from("reading_plan_daily_completion")
+      .select("id")
+      .eq("allocation_id", alloc.id)
+      .eq("completed_for_date", completionDateStr)
+      .maybeSingle();
+
+    if (existing) {
+      await sb.from("reading_plan_daily_completion").delete().eq("id", existing.id);
+    } else {
+      await sb.from("reading_plan_daily_completion").insert({
+        allocation_id: alloc.id,
+        completed_for_date: completionDateStr,
+        user_id: user.userId,
+      });
+    }
   }
 
   // Auto-close: progressing plan where every member with any historical
   // allocation has a completion for every plan day in [1..total_days].
-  if (!existing && plan.status === "active") {
+  if (plan.status === "active") {
     await maybeAutoClose(planId);
   }
 

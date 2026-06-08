@@ -43,7 +43,7 @@ export default async function AdminSettingsPage() {
 
   const { data: group } = await sb
     .from("groups")
-    .select("milestone_started_at, default_start_day")
+    .select("milestone_started_at, default_start_day, timezone")
     .eq("id", admin.groupId)
     .single();
 

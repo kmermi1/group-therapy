@@ -2,8 +2,8 @@ import { requireUser } from "@/app/actions/auth";
 import { createAdminClient } from "@/lib/supabase/server";
 import { PageHeader, Card } from "@/components/ui";
 import { userResetHistoryAction } from "@/app/actions/tasks";
-import { markReadingDayAction, unmarkReadingDayAction } from "@/app/actions/reading";
 import { t } from "@/lib/i18n";
+import HistoryReadingDayButton from "./HistoryReadingDayButton";
 import { CalendarHeatmap } from "@/components/charts/CalendarHeatmap";
 import HistoryDayRow from "./HistoryDayRow";
 import { todayInGroupTz, daysBetween } from "@/lib/plans";
@@ -173,23 +173,11 @@ export default async function HistoryPage() {
                       const isCompleted = alloc._completions?.includes(date);
                       return (
                         <div key={`${allocId}-${date}`} className="flex items-center gap-2">
-                          <form
-                            action={isCompleted ? unmarkReadingDayAction : markReadingDayAction}
-                            className="flex items-center gap-2"
-                          >
-                            <input type="hidden" name="allocationId" value={allocId} />
-                            <input type="hidden" name="forDate" value={date} />
-                            <button
-                              type="submit"
-                              className={`flex-1 px-2 py-1 text-xs rounded border text-left transition-colors ${
-                                isCompleted
-                                  ? "bg-[var(--color-accent)] border-[var(--color-accent)] text-[var(--color-accent-fg)]"
-                                  : "border-[var(--color-border)] bg-[var(--color-card)] hover:bg-[var(--color-card)]/70"
-                              }`}
-                            >
-                              {date}
-                            </button>
-                          </form>
+                          <HistoryReadingDayButton
+                            date={date}
+                            allocationId={allocId}
+                            isCompleted={isCompleted}
+                          />
                         </div>
                       );
                     })}

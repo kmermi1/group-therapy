@@ -56,6 +56,12 @@ export default function AdminCreateTaskForm({ users }: { users: Array<{ id: stri
           )}
           {frequency === "once" && <input type="hidden" name="target" value="1" />}
         </div>
+        {frequency === "once" && (
+          <div>
+            <Label htmlFor="deadline">Deadline (optional)</Label>
+            <Input id="deadline" name="deadline" type="date" />
+          </div>
+        )}
         <div>
           <Label htmlFor="assigneeUserId">Assign to</Label>
           <select

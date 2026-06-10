@@ -18,6 +18,8 @@ export async function createTaskAction(formData: FormData) {
   const totalTarget = totalRaw === "" ? null : Math.max(1, Number(totalRaw));
   const assigneeRaw = String(formData.get("assigneeUserId") || "");
   const assigneeUserId = assigneeRaw === "all" || assigneeRaw === "" ? null : assigneeRaw;
+  const deadlineRaw = String(formData.get("deadline") || "").trim();
+  const deadline = deadlineRaw === "" ? null : deadlineRaw;
   const image = formData.get("image") as File | null;
 
   if (!title) throw new Error("Title required.");
@@ -45,6 +47,7 @@ export async function createTaskAction(formData: FormData) {
     target_per_milestone: target,
     total_target: totalTarget,
     assignee_user_id: assigneeUserId,
+    deadline,
   });
   if (error) throw new Error(error.message);
   revalidatePath("/admin");
@@ -127,6 +130,8 @@ export async function editTaskAction(formData: FormData) {
     const totalTarget = totalRaw === "" ? null : Math.max(1, Number(totalRaw));
     const assigneeRaw = String(formData.get("assigneeUserId") || "");
     const assigneeUserId = assigneeRaw === "all" || assigneeRaw === "" ? null : assigneeRaw;
+    const deadlineRaw = String(formData.get("deadline") || "").trim();
+    const deadline = deadlineRaw === "" ? null : deadlineRaw;
     const removeImage = formData.get("removeImage") === "on";
     const image = formData.get("image") as File | null;
 
@@ -173,6 +178,7 @@ export async function editTaskAction(formData: FormData) {
       target_per_milestone: target,
       total_target: totalTarget,
       assignee_user_id: assigneeUserId,
+      deadline,
     };
     if (image_path !== undefined) update.image_path = image_path;
 

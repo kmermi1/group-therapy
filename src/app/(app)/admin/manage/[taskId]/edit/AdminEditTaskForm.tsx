@@ -13,6 +13,7 @@ type Task = {
   assignee_user_id: string | null;
   total_target: number | null;
   image_path: string | null;
+  deadline: string | null;
 };
 
 export default function AdminEditTaskForm({
@@ -75,6 +76,12 @@ export default function AdminEditTaskForm({
           )}
           {frequency === "once" && <input type="hidden" name="target" value="1" />}
         </div>
+        {frequency === "once" && (
+          <div>
+            <Label htmlFor="deadline">Deadline (optional)</Label>
+            <Input id="deadline" name="deadline" type="date" defaultValue={task.deadline ?? ""} />
+          </div>
+        )}
         <div>
           <Label htmlFor="assigneeUserId">Assign to</Label>
           <select

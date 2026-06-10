@@ -90,10 +90,17 @@ export default async function LeaderboardPage({
     .select("user_id, allocation_id")
     .gte("completed_for_date", startStr);
 
-  // Calculate days in milestone for reading plan minimum calculation
-  const today = new Date();
+  // Calculate days in milestone for reading plan minimum calculation (in group timezone)
+  const fmtTz = new Intl.DateTimeFormat("en-CA", {
+    timeZone: timezone,
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  });
+  const todayStr = fmtTz.format(new Date());
   const milestoneStartDate = new Date(startStr + "T00:00:00Z");
-  const daysInMilestone = Math.floor((today.getTime() - milestoneStartDate.getTime()) / (1000 * 60 * 60 * 24)) + 1;
+  const todayDate = new Date(todayStr + "T00:00:00Z");
+  const daysInMilestone = Math.floor((todayDate.getTime() - milestoneStartDate.getTime()) / (1000 * 60 * 60 * 24)) + 1;
 
   const userReadingAllocCount: Record<string, number> = {};
   for (const alloc of readingAllocs ?? []) {

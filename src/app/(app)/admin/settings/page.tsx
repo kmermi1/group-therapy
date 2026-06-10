@@ -24,11 +24,14 @@ const TIMEZONES = [
   "Australia/Sydney",
 ];
 
-function formatDateForInput(date: Date): string {
-  const yyyy = date.getFullYear();
-  const mm = String(date.getMonth() + 1).padStart(2, "0");
-  const dd = String(date.getDate()).padStart(2, "0");
-  return `${yyyy}-${mm}-${dd}`;
+function formatDateForInput(date: Date, timezone: string = "America/New_York"): string {
+  const fmt = new Intl.DateTimeFormat("en-CA", {
+    timeZone: timezone,
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  });
+  return fmt.format(date);
 }
 
 export default async function AdminSettingsPage() {
@@ -60,7 +63,7 @@ export default async function AdminSettingsPage() {
               id="milestoneStartDate"
               name="milestoneStartDate"
               type="date"
-              defaultValue={group ? formatDateForInput(new Date(group.milestone_started_at)) : ""}
+              defaultValue={group ? formatDateForInput(new Date(group.milestone_started_at), group.timezone || "America/New_York") : ""}
               required
               className="w-full rounded-lg border border-[var(--color-border)] bg-[var(--color-card)] px-3 py-2.5 text-sm"
             />

@@ -71,26 +71,24 @@ export default async function LeaderboardPage({
     .select("user_id")
     .is("to_day", null);
 
-  // Fetch reading plans for "by task" view
-  const { data: readingPlans, error: plansError } = await sb
+  // Fetch active reading plans for "by task" view
+  const { data: readingPlans } = await sb
     .from("reading_plans")
     .select("id, name")
-    .eq("group_id", s.groupId);
-  if (plansError) console.log("Reading plans error:", plansError);
+    .eq("group_id", s.groupId)
+    .eq("status", "active");
 
   // Get reading plan allocation info with plan IDs
-  const { data: readingAllocWithPlans, error: allocError } = await sb
+  const { data: readingAllocWithPlans } = await sb
     .from("reading_plan_allocations")
     .select("id, user_id, plan_id")
     .is("to_day", null);
-  if (allocError) console.log("Reading allocations error:", allocError);
 
   // Fetch reading plan completions by plan for "by task" view
-  const { data: readingPlanCompsByPlan, error: compsError } = await sb
+  const { data: readingPlanCompsByPlan } = await sb
     .from("reading_plan_daily_completion")
     .select("user_id, allocation_id")
     .gte("completed_for_date", startStr);
-  if (compsError) console.log("Reading completions error:", compsError);
 
   // Calculate days in milestone for reading plan minimum calculation
   const today = new Date();
@@ -158,11 +156,6 @@ export default async function LeaderboardPage({
     }
   }
 
-  // Debug logging
-  console.log("Reading plans found:", readingPlans?.length);
-  console.log("Reading allocations found:", readingAllocWithPlans?.length);
-  console.log("Reading completions found:", readingPlanCompsByPlan?.length);
-  console.log("Processed reading plan comps count:", Object.keys(readingPlanCompsCount).length);
 
   const locale = s.kind === "user" ? s.locale : "en";
   const tr = (k: Parameters<typeof t>[0], p?: Record<string, string | number>) => t(k, locale, p);

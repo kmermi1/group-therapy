@@ -13,16 +13,25 @@ type Task = {
   target_per_milestone: number;
 };
 
-type TaskRowProps = React.ComponentProps<typeof TaskRow>;
+type TaskWithUI = Task & {
+  count: number;
+  target: number;
+  isLongTerm?: boolean;
+  isWeekly?: boolean;
+  doneThisWeek?: boolean;
+  doneToday: boolean;
+  forDate: string;
+  imageUrl?: string;
+  badgeText: string;
+  badgeClass: string;
+};
 
 export default function PersonalTasksSection({
   tasks,
   locale,
-  ...props
 }: {
-  tasks: TaskRowProps[];
+  tasks: TaskWithUI[];
   locale: Locale;
-  children?: React.ReactNode;
 }) {
   const [editingTask, setEditingTask] = useState<Task | null>(null);
 
@@ -31,11 +40,22 @@ export default function PersonalTasksSection({
   }
 
   return (
-    <>
-      {tasks.map((taskProps) => (
+    <ul className="space-y-3">
+      {tasks.map((t) => (
         <TaskRow
-          key={taskProps.task.id}
-          {...taskProps}
+          key={t.id}
+          task={t}
+          doneToday={t.doneToday}
+          count={t.count}
+          target={t.target}
+          isLongTerm={t.isLongTerm}
+          isWeekly={t.isWeekly}
+          doneThisWeek={t.doneThisWeek}
+          forDate={t.forDate}
+          imageUrl={t.imageUrl}
+          badgeText={t.badgeText}
+          badgeClass={t.badgeClass}
+          canDelete={true}
           locale={locale}
           onEdit={(task) =>
             setEditingTask({
@@ -43,11 +63,11 @@ export default function PersonalTasksSection({
               title: task.title,
               description: task.description,
               frequency: task.frequency,
-              target_per_milestone: taskProps.target,
+              target_per_milestone: t.target,
             })
           }
         />
       ))}
-    </>
+    </ul>
   );
 }

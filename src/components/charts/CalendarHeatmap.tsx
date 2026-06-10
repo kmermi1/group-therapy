@@ -45,17 +45,11 @@ export function CalendarHeatmap({
 
   const maxCount = Math.max(1, ...days.map((d) => d.count));
 
-  // Format week header
-  function formatWeekLabel(col: typeof days): string {
-    if (col.length === 0) return "";
-    const first = col[0].date;
-    const last = col[col.length - 1].date;
-    const [, m1, d1] = first.split("-");
-    const [, m2, d2] = last.split("-");
-    if (m1 === m2) {
-      return `${m2}/${d1}-${d2}`;
-    }
-    return `${m1}/${d1}-${m2}/${d2}`;
+  // Format week label: "This week" for current, "W2", "W3", etc for older
+  function getWeekLabel(weekIndex: number): string {
+    const weeksAgo = weeks - 1 - weekIndex;
+    if (weeksAgo === 0) return "This week";
+    return `W${weeksAgo + 1}`;
   }
 
   return (
@@ -72,27 +66,29 @@ export function CalendarHeatmap({
         </div>
         <span>More</span>
       </div>
-      <div className="overflow-x-auto pb-2">
-        <div className="flex gap-[6px] min-w-min" aria-label="completion heatmap">
-          {cols.map((col, ci) => (
-            <div key={ci} className="flex flex-col items-center gap-[2px]">
-              <div className="text-[10px] text-[var(--color-foreground)]/50 h-4 flex items-center">
-                {formatWeekLabel(col)}
-              </div>
-              <div className="flex flex-col gap-[3px]">
-                {col.map((d) => (
-                  <div
-                    key={d.date}
-                    title={`${d.date}: ${d.count} completions`}
-                    className={`h-[14px] w-[14px] rounded-sm transition-all ${
-                      d.isToday ? "ring-2 ring-[var(--accent)] ring-offset-1" : ""
-                    } ${intensity(d.count, maxCount)}`}
-                  />
-                ))}
-              </div>
+      <div className="flex gap-[8px]" aria-label="completion heatmap">
+        {cols.map((col, ci) => (
+          <div key={ci} className="flex flex-col items-center gap-[2px]">
+            <div className={`text-[11px] font-medium h-5 flex items-center ${
+              ci === cols.length - 1
+                ? "text-[var(--accent)] font-semibold"
+                : "text-[var(--color-foreground)]/60"
+            }`}>
+              {getWeekLabel(ci)}
             </div>
-          ))}
-        </div>
+            <div className="flex flex-col gap-[3px]">
+              {col.map((d) => (
+                <div
+                  key={d.date}
+                  title={`${d.date}: ${d.count} completions`}
+                  className={`h-[14px] w-[14px] rounded-sm transition-all ${
+                    d.isToday ? "ring-2 ring-[var(--accent)] ring-offset-1" : ""
+                  } ${intensity(d.count, maxCount)}`}
+                />
+              ))}
+            </div>
+          </div>
+        ))}
       </div>
     </div>
   );

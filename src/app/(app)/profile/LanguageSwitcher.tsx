@@ -3,11 +3,12 @@
 import { useTransition } from "react";
 import { setLanguageAction } from "@/app/actions/auth";
 import { LOCALES, LOCALE_LABELS, type Locale } from "@/lib/i18n";
+import CustomSelect from "@/components/CustomSelect";
 
 export default function LanguageSwitcher({ current }: { current: Locale }) {
   const [pending, start] = useTransition();
-  function onChange(e: React.ChangeEvent<HTMLSelectElement>) {
-    const l = e.target.value as Locale;
+
+  function onChange(l: Locale) {
     if (l === current || pending) return;
     const fd = new FormData();
     fd.set("locale", l);
@@ -15,16 +16,13 @@ export default function LanguageSwitcher({ current }: { current: Locale }) {
       try { await setLanguageAction(fd); } catch {}
     });
   }
+
   return (
-    <select
+    <CustomSelect
       value={current}
       onChange={onChange}
       disabled={pending}
-      className="w-full rounded-lg border border-[var(--color-border)] bg-[var(--color-background)] px-3 py-2.5 text-sm"
-    >
-      {LOCALES.map((l) => (
-        <option key={l} value={l}>{LOCALE_LABELS[l]}</option>
-      ))}
-    </select>
+      options={LOCALES.map((l) => ({ value: l, label: LOCALE_LABELS[l] }))}
+    />
   );
 }

@@ -71,6 +71,25 @@ export default async function LeaderboardPage({
     .select("user_id")
     .is("to_day", null);
 
+  // Fetch reading plans for "by task" view
+  const { data: readingPlans } = await sb
+    .from("reading_plans")
+    .select("id, title")
+    .eq("group_id", s.groupId)
+    .is("archived_at", null);
+
+  // Fetch reading plan completions by plan for "by task" view
+  const { data: readingPlanCompsByPlan } = await sb
+    .from("reading_plan_daily_completion")
+    .select("user_id, reading_plan_allocation_id, reading_plan_allocations!inner(reading_plan_id)")
+    .gte("completed_for_date", startStr);
+
+  // Get reading plan allocation info
+  const { data: readingAllocWithPlans } = await sb
+    .from("reading_plan_allocations")
+    .select("id, user_id, reading_plan_id")
+    .is("to_day", null);
+
   // Calculate days in milestone for reading plan minimum calculation
   const today = new Date();
   const milestoneStartDate = new Date(startStr + "T00:00:00Z");
@@ -123,6 +142,20 @@ export default async function LeaderboardPage({
     userTaskAllTime[`${c.user_id}:${c.task_id}`] = (userTaskAllTime[`${c.user_id}:${c.task_id}`] || 0) + 1;
   }
 
+  // Process reading plan completions for "by task" view
+  const readingPlanCompsCount: Record<string, number> = {};
+  const allocPlanMap: Record<string, string> = {}; // alloc_id -> plan_id
+  for (const alloc of readingAllocWithPlans ?? []) {
+    allocPlanMap[alloc.id] = alloc.reading_plan_id;
+  }
+  for (const comp of readingPlanCompsByPlan ?? []) {
+    const planId = allocPlanMap[comp.reading_plan_allocation_id];
+    if (planId) {
+      const k = `${comp.user_id}:${planId}`;
+      readingPlanCompsCount[k] = (readingPlanCompsCount[k] || 0) + 1;
+    }
+  }
+
   const locale = s.kind === "user" ? s.locale : "en";
   const tr = (k: Parameters<typeof t>[0], p?: Record<string, string | number>) => t(k, locale, p);
   return (
@@ -156,7 +189,15 @@ export default async function LeaderboardPage({
           tr={tr}
         />
       ) : (
-        <TasksView tasks={tasks ?? []} users={users ?? []} counts={userTaskCount} allTime={userTaskAllTime} currentUserId={s.kind === "user" ? s.userId : null} />
+        <TasksView
+          tasks={tasks ?? []}
+          users={users ?? []}
+          counts={userTaskCount}
+          allTime={userTaskAllTime}
+          currentUserId={s.kind === "user" ? s.userId : null}
+          readingPlans={readingPlans ?? []}
+          readingPlanComps={readingPlanCompsCount}
+        />
       )}
     </main>
   );
@@ -222,14 +263,18 @@ function TasksView({
   counts,
   allTime,
   currentUserId,
+  readingPlans = [],
+  readingPlanComps = {},
 }: {
   tasks: { id: string; title: string; frequency: string; target_per_milestone: number; total_target: number | null; assignee_user_id: string | null }[];
   users: { id: string; username: string }[];
   counts: Record<string, number>;
   allTime: Record<string, number>;
   currentUserId: string | null;
+  readingPlans?: { id: string; title: string }[];
+  readingPlanComps?: Record<string, number>;
 }) {
-  if (tasks.length === 0) {
+  if (tasks.length === 0 && readingPlans.length === 0) {
     return <p className="text-sm text-[var(--color-foreground)]/60">No tasks yet.</p>;
   }
   return (
@@ -277,6 +322,41 @@ function TasksView({
               ))}
               {rows.length === 0 && (
                 <li className="text-xs text-[var(--color-foreground)]/60">No one assigned.</li>
+              )}
+            </ul>
+          </Card>
+        );
+      })}
+      {readingPlans.map((plan) => {
+        const rows = users
+          .map((u) => {
+            const c = readingPlanComps[`${u.id}:${plan.id}`] ?? 0;
+            return { id: u.id, username: u.username, count: c, met: c > 0 };
+          })
+          .filter((r) => r.count > 0)
+          .sort((a, b) => b.count - a.count);
+
+        return (
+          <Card key={plan.id}>
+            <div className="flex items-baseline gap-2 mb-2 flex-wrap">
+              <h3 className="font-semibold flex-1 min-w-0 truncate">{plan.title}</h3>
+              <span className="text-[10px] uppercase tracking-wide px-1.5 py-0.5 rounded bg-blue-500/20 text-blue-700 dark:text-blue-300">
+                reading plan
+              </span>
+            </div>
+            <ul className="space-y-2">
+              {rows.map((r) => (
+                <li key={r.id} className={r.id === currentUserId ? "font-semibold" : ""}>
+                  <div className="flex items-center gap-2 text-sm">
+                    <span className="flex-1 truncate">{r.username}</span>
+                    <span className="font-mono text-xs px-1.5 py-0.5 rounded bg-emerald-500/30 text-emerald-700 dark:text-emerald-300">
+                      {r.count} days
+                    </span>
+                  </div>
+                </li>
+              ))}
+              {rows.length === 0 && (
+                <li className="text-xs text-[var(--color-foreground)]/60">No completions yet.</li>
               )}
             </ul>
           </Card>

@@ -19,7 +19,7 @@ export default function EditPersonalTask({ task, locale, onClose }: { task: Task
   const tr = (k: Parameters<typeof t>[0]) => t(k, locale);
   const [pending, start] = useTransition();
   const [error, setError] = useState<string | null>(null);
-  const [frequency, setFrequency] = useState(task.frequency);
+  const [frequency, setFrequency] = useState<string>(task.frequency);
 
   function submit(fd: FormData) {
     fd.set("taskId", task.id);

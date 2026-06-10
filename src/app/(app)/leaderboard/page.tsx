@@ -202,7 +202,7 @@ function PeopleView({
             <span className="w-6 text-center text-sm font-bold text-[var(--color-foreground)]/60">{i + 1}</span>
             <span className="flex-1 font-medium">{r.username}</span>
             <div className="text-right">
-              <div className="text-xs text-[var(--color-foreground)]/60">Done / Min</div>
+              <div className="text-xs text-[var(--color-foreground)]/60">{tr("doneLabel")} / {tr("minLabel")}</div>
               <div className="text-sm font-mono font-bold">{r.done}/{r.max}</div>
             </div>
           </div>

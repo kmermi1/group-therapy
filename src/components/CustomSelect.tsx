@@ -31,7 +31,7 @@ export default function CustomSelect<T extends string>({
   }, []);
 
   return (
-    <div ref={ref} className={`relative ${className}`}>
+    <div ref={ref} className={`relative z-[999] ${className}`}>
       <button
         type="button"
         onClick={() => !disabled && setIsOpen(!isOpen)}
@@ -44,7 +44,7 @@ export default function CustomSelect<T extends string>({
         </svg>
       </button>
       {isOpen && !disabled && (
-        <div className="absolute top-full left-0 right-0 mt-1 bg-[var(--color-background)] border border-[var(--color-border)] rounded-lg shadow-lg z-50">
+        <div className="absolute top-full left-0 right-0 mt-1 bg-[var(--color-background)] border border-[var(--color-border)] rounded-lg shadow-lg z-[999]">
           {options.map((opt) => (
             <button
               key={opt.value}

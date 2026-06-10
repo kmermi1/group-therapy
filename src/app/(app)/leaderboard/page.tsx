@@ -72,23 +72,26 @@ export default async function LeaderboardPage({
     .is("to_day", null);
 
   // Fetch reading plans for "by task" view
-  const { data: readingPlans } = await sb
+  const { data: readingPlans, error: plansError } = await sb
     .from("reading_plans")
     .select("id, title")
     .eq("group_id", s.groupId)
     .is("archived_at", null);
+  if (plansError) console.log("Reading plans error:", plansError);
 
   // Get reading plan allocation info with plan IDs
-  const { data: readingAllocWithPlans } = await sb
+  const { data: readingAllocWithPlans, error: allocError } = await sb
     .from("reading_plan_allocations")
     .select("id, user_id, reading_plan_id")
     .is("to_day", null);
+  if (allocError) console.log("Reading allocations error:", allocError);
 
   // Fetch reading plan completions by plan for "by task" view
-  const { data: readingPlanCompsByPlan } = await sb
+  const { data: readingPlanCompsByPlan, error: compsError } = await sb
     .from("reading_plan_daily_completion")
     .select("user_id, reading_plan_allocation_id")
     .gte("completed_for_date", startStr);
+  if (compsError) console.log("Reading completions error:", compsError);
 
   // Calculate days in milestone for reading plan minimum calculation
   const today = new Date();

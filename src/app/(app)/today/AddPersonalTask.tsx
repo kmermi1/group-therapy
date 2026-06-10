@@ -54,7 +54,6 @@ export default function AddPersonalTask({ locale }: { locale: Locale }) {
           <select
             id="pfrequency"
             name="frequency"
-            defaultValue="daily"
             value={frequency}
             onChange={(e) => setFrequency(e.currentTarget.value)}
             className="w-full rounded-lg border border-[var(--color-border)] bg-[var(--color-background)] px-3 py-2.5 text-sm"

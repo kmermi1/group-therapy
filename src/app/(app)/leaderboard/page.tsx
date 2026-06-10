@@ -65,8 +65,48 @@ export default async function LeaderboardPage({
     .select("user_id, completed_for_date")
     .gte("completed_for_date", startStr);
 
+  // Get reading plan allocations to calculate possible completions
+  const { data: readingAllocs } = await sb
+    .from("reading_plan_allocations")
+    .select("user_id")
+    .is("to_day", null);
+
+  // Calculate days in milestone for reading plan minimum calculation
+  const today = new Date();
+  const milestoneStartDate = new Date(startStr + "T00:00:00Z");
+  const daysInMilestone = Math.floor((today.getTime() - milestoneStartDate.getTime()) / (1000 * 60 * 60 * 24)) + 1;
+
+  const userReadingAllocCount: Record<string, number> = {};
+  for (const alloc of readingAllocs ?? []) {
+    userReadingAllocCount[alloc.user_id] = (userReadingAllocCount[alloc.user_id] || 0) + 1;
+  }
+
   const userTaskCount: Record<string, number> = {};
   const userTotal: Record<string, number> = {};
+  const userMinimum: Record<string, number> = {}; // task targets + reading allocations × days
+
+  // Initialize minimum with task targets
+  for (const u of users ?? []) {
+    userMinimum[u.id] = 0;
+  }
+  for (const t of tasks ?? []) {
+    if (!t.total_target) {
+      const assignee = t.assignee_user_id || "all";
+      if (assignee === "all") {
+        for (const u of users ?? []) {
+          userMinimum[u.id] = (userMinimum[u.id] || 0) + t.target_per_milestone;
+        }
+      } else {
+        userMinimum[assignee] = (userMinimum[assignee] || 0) + t.target_per_milestone;
+      }
+    }
+  }
+
+  // Add reading plan potential to minimum
+  for (const userId of Object.keys(userReadingAllocCount)) {
+    userMinimum[userId] = (userMinimum[userId] || 0) + userReadingAllocCount[userId] * daysInMilestone;
+  }
+
   for (const c of comps ?? []) {
     const k = `${c.user_id}:${c.task_id}`;
     userTaskCount[k] = (userTaskCount[k] || 0) + 1;
@@ -108,6 +148,7 @@ export default async function LeaderboardPage({
         <PeopleView
           users={users ?? []}
           totals={userTotal}
+          minimums={userMinimum}
           tasks={tasks ?? []}
           counts={userTaskCount}
           allTime={userTaskAllTime}
@@ -123,6 +164,7 @@ export default async function LeaderboardPage({
 function PeopleView({
   users,
   totals,
+  minimums,
   tasks,
   counts,
   allTime,
@@ -130,6 +172,7 @@ function PeopleView({
 }: {
   users: { id: string; username: string }[];
   totals: Record<string, number>;
+  minimums: Record<string, number>;
   tasks: { id: string; assignee_user_id: string | null; target_per_milestone: number; total_target: number | null }[];
   counts: Record<string, number>;
   allTime: Record<string, number>;
@@ -138,20 +181,12 @@ function PeopleView({
   if (users.length === 0) {
     return <p className="text-sm text-[var(--color-foreground)]/60">No one in the group yet.</p>;
   }
-  // For each user: max possible (sum of their assigned tasks' targets) and done (sum across tasks of min(count, target)).
+  // For each user: show total completions / minimum required (includes tasks + reading plans)
   const rows = users
     .map((u) => {
-      const myTasks = tasks.filter((t) => t.assignee_user_id === null || t.assignee_user_id === u.id);
-      let max = 0;
-      let done = 0;
-      for (const t of myTasks) {
-        const tgt = t.total_target ?? t.target_per_milestone;
-        const src = t.total_target ? allTime : counts;
-        const c = src[`${u.id}:${t.id}`] ?? 0;
-        max += tgt;
-        done += Math.min(c, tgt);
-      }
-      return { id: u.id, username: u.username, count: totals[u.id] ?? 0, done, max };
+      const done = totals[u.id] ?? 0;
+      const max = minimums[u.id] ?? 0;
+      return { id: u.id, username: u.username, count: done, done, max };
     })
     .sort((a, b) => (b.max > 0 ? b.done / b.max : 0) - (a.max > 0 ? a.done / a.max : 0));
   return (

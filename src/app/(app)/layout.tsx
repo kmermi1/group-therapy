@@ -13,6 +13,15 @@ export default async function AppLayout({ children }: { children: React.ReactNod
   const isAdmin = s.kind === "admin";
   const locale = s.kind === "user" ? s.locale : "en";
 
+  // Fetch group name for header
+  const sbGroup = createAdminClient();
+  const { data: groupData } = await sbGroup
+    .from("groups")
+    .select("name")
+    .eq("id", s.groupId)
+    .single();
+  const groupName = groupData?.name ?? "";
+
   // Fetch unseen feedback for admins
   let unseenFeedback: Array<{
     id: string;
@@ -67,7 +76,15 @@ export default async function AppLayout({ children }: { children: React.ReactNod
   }
 
   return (
-    <div className="flex-1 flex flex-col pb-24">
+    <div className="flex-1 flex flex-col pb-24 pt-12">
+      <header className="fixed top-0 inset-x-0 z-10 bg-[var(--background)]/90 backdrop-blur-md border-b border-[var(--border)]">
+        <div className="max-w-md mx-auto px-5 py-2.5 flex items-center justify-center gap-2">
+          <span className="text-base">👥</span>
+          <span className="text-sm font-semibold tracking-tight text-[var(--foreground)] truncate">
+            {groupName}
+          </span>
+        </div>
+      </header>
       <div className="flex-1">{children}</div>
       <FeedbackButton locale={locale} />
       {unseenFeedback.length > 0 && <UnseenFeedbackModal items={unseenFeedback} />}

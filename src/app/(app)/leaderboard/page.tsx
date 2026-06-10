@@ -74,7 +74,7 @@ export default async function LeaderboardPage({
   // Fetch reading plans for "by task" view
   const { data: readingPlans, error: plansError } = await sb
     .from("reading_plans")
-    .select("id, title")
+    .select("id, name")
     .eq("group_id", s.groupId)
     .is("archived_at", null);
   if (plansError) console.log("Reading plans error:", plansError);
@@ -82,14 +82,14 @@ export default async function LeaderboardPage({
   // Get reading plan allocation info with plan IDs
   const { data: readingAllocWithPlans, error: allocError } = await sb
     .from("reading_plan_allocations")
-    .select("id, user_id, reading_plan_id")
+    .select("id, user_id, plan_id")
     .is("to_day", null);
   if (allocError) console.log("Reading allocations error:", allocError);
 
   // Fetch reading plan completions by plan for "by task" view
   const { data: readingPlanCompsByPlan, error: compsError } = await sb
     .from("reading_plan_daily_completion")
-    .select("user_id, reading_plan_allocation_id")
+    .select("user_id, allocation_id")
     .gte("completed_for_date", startStr);
   if (compsError) console.log("Reading completions error:", compsError);
 
@@ -149,10 +149,10 @@ export default async function LeaderboardPage({
   const readingPlanCompsCount: Record<string, number> = {};
   const allocPlanMap: Record<string, string> = {}; // alloc_id -> plan_id
   for (const alloc of readingAllocWithPlans ?? []) {
-    allocPlanMap[alloc.id] = alloc.reading_plan_id;
+    allocPlanMap[alloc.id] = alloc.plan_id;
   }
   for (const comp of readingPlanCompsByPlan ?? []) {
-    const planId = allocPlanMap[comp.reading_plan_allocation_id];
+    const planId = allocPlanMap[comp.allocation_id];
     if (planId) {
       const k = `${comp.user_id}:${planId}`;
       readingPlanCompsCount[k] = (readingPlanCompsCount[k] || 0) + 1;
@@ -280,7 +280,7 @@ function TasksView({
   counts: Record<string, number>;
   allTime: Record<string, number>;
   currentUserId: string | null;
-  readingPlans?: { id: string; title: string }[];
+  readingPlans?: { id: string; name: string }[];
   readingPlanComps?: Record<string, number>;
 }) {
   if (tasks.length === 0 && readingPlans.length === 0) {
@@ -348,7 +348,7 @@ function TasksView({
         return (
           <Card key={plan.id}>
             <div className="flex items-baseline gap-2 mb-2 flex-wrap">
-              <h3 className="font-semibold flex-1 min-w-0 truncate">{plan.title}</h3>
+              <h3 className="font-semibold flex-1 min-w-0 truncate">{plan.name}</h3>
               <span className="text-[10px] uppercase tracking-wide px-1.5 py-0.5 rounded bg-blue-500/20 text-blue-700 dark:text-blue-300">
                 reading plan
               </span>

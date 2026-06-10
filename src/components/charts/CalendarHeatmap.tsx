@@ -69,7 +69,7 @@ export function CalendarHeatmap({
       <div className="flex gap-[8px]" aria-label="completion heatmap">
         {cols.map((col, ci) => (
           <div key={ci} className="flex flex-col items-center gap-[2px]">
-            <div className={`text-[11px] font-medium h-5 flex items-center ${
+            <div className={`text-[11px] font-medium h-5 flex items-end ${
               ci === cols.length - 1
                 ? "text-[var(--accent)] font-semibold"
                 : "text-[var(--color-foreground)]/60"

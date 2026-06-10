@@ -4,6 +4,7 @@ import { useState, useTransition } from "react";
 import { Button, Input, Label, Card } from "@/components/ui";
 import { createPersonalTaskAction } from "@/app/actions/tasks";
 import { t, type Locale } from "@/lib/i18n";
+import FrequencySelect from "./FrequencySelect";
 
 export default function AddPersonalTask({ locale }: { locale: Locale }) {
   const tr = (k: Parameters<typeof t>[0]) => t(k, locale);
@@ -51,17 +52,7 @@ export default function AddPersonalTask({ locale }: { locale: Locale }) {
         </div>
         <div>
           <Label htmlFor="pfrequency">{tr("frequency")}</Label>
-          <select
-            id="pfrequency"
-            name="frequency"
-            value={frequency}
-            onChange={(e) => setFrequency(e.currentTarget.value)}
-            className="w-full rounded-lg border border-[var(--color-border)] bg-[var(--color-background)] px-3 py-2.5 text-sm"
-          >
-            <option value="once">One-time</option>
-            <option value="daily">Daily</option>
-            <option value="weekly">Weekly</option>
-          </select>
+          <FrequencySelect value={frequency} onChange={setFrequency} />
         </div>
         {frequency !== "once" ? (
           <div>

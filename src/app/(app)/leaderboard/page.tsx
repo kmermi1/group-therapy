@@ -75,8 +75,7 @@ export default async function LeaderboardPage({
   const { data: readingPlans, error: plansError } = await sb
     .from("reading_plans")
     .select("id, name")
-    .eq("group_id", s.groupId)
-    .is("archived_at", null);
+    .eq("group_id", s.groupId);
   if (plansError) console.log("Reading plans error:", plansError);
 
   // Get reading plan allocation info with plan IDs

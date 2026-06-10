@@ -156,6 +156,12 @@ export default async function LeaderboardPage({
     }
   }
 
+  // Debug logging
+  console.log("Reading plans found:", readingPlans?.length);
+  console.log("Reading allocations found:", readingAllocWithPlans?.length);
+  console.log("Reading completions found:", readingPlanCompsByPlan?.length);
+  console.log("Processed reading plan comps count:", Object.keys(readingPlanCompsCount).length);
+
   const locale = s.kind === "user" ? s.locale : "en";
   const tr = (k: Parameters<typeof t>[0], p?: Record<string, string | number>) => t(k, locale, p);
   return (

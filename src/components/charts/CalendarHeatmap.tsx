@@ -82,8 +82,8 @@ export function CalendarHeatmap({
                   key={d.date}
                   title={`${d.date}: ${d.count} completions`}
                   className={`h-[14px] w-[14px] rounded-sm transition-all ${
-                    d.isToday ? "ring-2 ring-[var(--accent)] ring-offset-1" : ""
-                  } ${intensity(d.count, maxCount)}`}
+                    d.isToday ? "ring-2 ring-[var(--accent)]" : ""
+                  } ${d.isToday && d.count === 0 ? "bg-[var(--accent)]/20" : ""} ${intensity(d.count, maxCount)}`}
                 />
               ))}
             </div>

@@ -22,6 +22,7 @@ export default async function AdminManagePage() {
     .select("*")
     .eq("group_id", admin.groupId)
     .is("archived_at", null)
+    .is("created_by_user_id", null)
     .order("created_at", { ascending: false });
 
   return (

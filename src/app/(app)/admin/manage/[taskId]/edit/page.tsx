@@ -10,7 +10,7 @@ export default async function EditTaskPage({ params }: { params: Promise<{ taskI
   const admin = await requireAdmin();
   const sb = createAdminClient();
   const { data: task } = await sb.from("tasks").select("*").eq("id", taskId).single();
-  if (!task || task.group_id !== admin.groupId) notFound();
+  if (!task || task.group_id !== admin.groupId || task.created_by_user_id) notFound();
 
   const { data: users } = await sb
     .from("users")

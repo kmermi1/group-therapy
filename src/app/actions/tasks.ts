@@ -146,8 +146,8 @@ export async function editTaskAction(formData: FormData) {
     if (!taskId || !title) throw new Error("Title required.");
 
     const sb = createAdminClient();
-    const { data: existing } = await sb.from("tasks").select("id, group_id, image_path").eq("id", taskId).single();
-    if (!existing || existing.group_id !== admin.groupId) throw new Error("Task not found.");
+    const { data: existing } = await sb.from("tasks").select("id, group_id, image_path, created_by_user_id").eq("id", taskId).single();
+    if (!existing || existing.group_id !== admin.groupId || existing.created_by_user_id) throw new Error("Task not found.");
 
     let image_path: string | null | undefined = undefined;
     if (image && image.size > 0) {
@@ -209,7 +209,12 @@ export async function archiveTaskAction(formData: FormData) {
   const admin = await requireAdmin();
   const taskId = String(formData.get("taskId") || "");
   const sb = createAdminClient();
-  await sb.from("tasks").update({ archived_at: new Date().toISOString() }).eq("id", taskId).eq("group_id", admin.groupId);
+  await sb
+    .from("tasks")
+    .update({ archived_at: new Date().toISOString() })
+    .eq("id", taskId)
+    .eq("group_id", admin.groupId)
+    .is("created_by_user_id", null);
   revalidatePath("/admin");
 }
 

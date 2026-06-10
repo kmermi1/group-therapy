@@ -12,7 +12,7 @@ export async function createTaskAction(formData: FormData) {
   const admin = await requireAdmin();
   const title = String(formData.get("title") || "").trim();
   const description = String(formData.get("description") || "").trim() || null;
-  const frequency = String(formData.get("frequency") || "daily") as "daily" | "weekly";
+  const frequency = String(formData.get("frequency") || "daily") as "once" | "daily" | "weekly";
   const target = Math.max(1, Number(formData.get("target") || 1));
   const totalRaw = String(formData.get("totalTarget") || "").trim();
   const totalTarget = totalRaw === "" ? null : Math.max(1, Number(totalRaw));
@@ -55,7 +55,7 @@ export async function createPersonalTaskAction(formData: FormData) {
   const user = await requireUser();
   const title = String(formData.get("title") || "").trim();
   const description = String(formData.get("description") || "").trim() || null;
-  const frequency = String(formData.get("frequency") || "daily") as "daily" | "weekly";
+  const frequency = String(formData.get("frequency") || "daily") as "once" | "daily" | "weekly";
   const target = Math.max(1, Number(formData.get("target") || 1));
 
   if (!title) throw new Error("Title required.");
@@ -94,7 +94,7 @@ export async function editTaskAction(formData: FormData) {
     const taskId = String(formData.get("taskId") || "");
     const title = String(formData.get("title") || "").trim();
     const description = String(formData.get("description") || "").trim() || null;
-    const frequency = String(formData.get("frequency") || "daily") as "daily" | "weekly";
+    const frequency = String(formData.get("frequency") || "daily") as "once" | "daily" | "weekly";
     const target = Math.max(1, Number(formData.get("target") || 1));
     const totalRaw = String(formData.get("totalTarget") || "").trim();
     const totalTarget = totalRaw === "" ? null : Math.max(1, Number(totalRaw));

@@ -48,6 +48,7 @@ export default async function EditTaskPage({ params }: { params: Promise<{ taskI
                 defaultValue={task.frequency}
                 className="w-full rounded-lg border border-[var(--color-border)] bg-[var(--color-background)] px-3 py-2.5 text-sm"
               >
+                <option value="once">One-time</option>
                 <option value="daily">Daily</option>
                 <option value="weekly">Weekly</option>
               </select>

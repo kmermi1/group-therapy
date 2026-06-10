@@ -8,7 +8,7 @@ type Task = {
   id: string;
   title: string;
   description: string | null;
-  frequency: "daily" | "weekly";
+  frequency: "once" | "daily" | "weekly";
 };
 
 export default function TaskRow({
@@ -101,28 +101,33 @@ export default function TaskRow({
         </button>
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2 flex-wrap">
-            <h3 className={`font-semibold text-[15px] ${isDone ? "line-through opacity-50" : ""}`}>
+            <h3 className={`font-semibold text-[15px] ${task.frequency !== "once" && isDone ? "line-through opacity-50" : ""}`}>
               {task.title}
             </h3>
             <span className={`text-[10px] uppercase tracking-wide px-2 py-0.5 rounded-md font-medium ${badgeClass}`}>
               {badgeText}
             </span>
-            {(target > 1 || isLongTerm) && (
+            {task.frequency === "once" && (
+              <span className={`text-[10px] px-2 py-0.5 rounded-md ${isDone ? "bg-emerald-500/15 text-emerald-600 dark:text-emerald-300" : "bg-slate-500/15 text-slate-600 dark:text-slate-300"}`}>
+                {isDone ? "✓ Done" : "⊙ Pending"}
+              </span>
+            )}
+            {task.frequency !== "once" && (target > 1 || isLongTerm) && (
               <span className={`text-[10px] numeric px-2 py-0.5 rounded-md ${metTarget ? "bg-emerald-500/15 text-emerald-600 dark:text-emerald-300" : "bg-[var(--surface)] text-[var(--foreground-mute)]"}`}>
                 {optimisticCount}/{target}{isLongTerm ? ` ${tr("allTime")}` : ""}
               </span>
             )}
-            {target === 1 && isDone && (
+            {task.frequency !== "once" && target === 1 && isDone && (
               <span className="text-[10px] px-2 py-0.5 rounded-md bg-emerald-500/15 text-emerald-600 dark:text-emerald-300">
                 ✓ Done today
               </span>
             )}
-            {target === 1 && !isDone && isWeekly && doneThisWeek && (
+            {task.frequency !== "once" && target === 1 && !isDone && isWeekly && doneThisWeek && (
               <span className="text-[10px] px-2 py-0.5 rounded-md bg-slate-500/15 text-slate-600 dark:text-slate-300">
                 ✓ Done this week
               </span>
             )}
-            {target === 1 && !isDone && !isWeekly && (
+            {task.frequency !== "once" && target === 1 && !isDone && !isWeekly && (
               <span className="text-[10px] px-2 py-0.5 rounded-md bg-amber-500/15 text-amber-600 dark:text-amber-300">
                 ⚠ Need today
               </span>

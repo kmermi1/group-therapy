@@ -165,25 +165,41 @@ export default function TaskRow({
           {task.description && (
             <p className="text-sm text-[var(--foreground-mute)] mt-1 leading-relaxed">{task.description}</p>
           )}
-          <div className="flex items-center gap-3 mt-2">
+          <div className="flex items-center gap-2 mt-2">
             {imageUrl && (
               <button type="button" onClick={() => setShowImage((v) => !v)} className="text-xs text-[var(--accent)] hover:underline">
                 {showImage ? tr("hideImage") : tr("viewImage")}
               </button>
             )}
-            {onEdit && (
-              <button type="button" onClick={() => onEdit(task)} className="text-xs text-[var(--accent)] hover:underline">
-                Edit
-              </button>
-            )}
-            {canDelete && (
-              <button type="button" onClick={onDelete} className="text-xs text-[var(--danger)] hover:underline">
-                {tr("delete")}
-              </button>
-            )}
-            <span className="text-[11px] text-[var(--foreground-mute)] ml-auto">
+            <span className="text-[11px] text-[var(--foreground-mute)]">
               {optimisticDone ? tr("doneToday") : tr("notDoneToday")}
             </span>
+            <div className="ml-auto flex items-center gap-4">
+              {onEdit && (
+                <button
+                  type="button"
+                  onClick={() => onEdit(task)}
+                  aria-label="Edit task"
+                  className="p-1.5 rounded-md text-[var(--foreground-mute)] hover:text-[var(--accent)] hover:bg-[var(--surface)] transition"
+                >
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                  </svg>
+                </button>
+              )}
+              {canDelete && (
+                <button
+                  type="button"
+                  onClick={onDelete}
+                  aria-label="Delete task"
+                  className="p-1.5 rounded-md text-[var(--foreground-mute)] hover:text-[var(--danger)] hover:bg-[var(--surface)] transition"
+                >
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6M1 7h22m-7 0V5a2 2 0 00-2-2h-4a2 2 0 00-2 2v2" />
+                  </svg>
+                </button>
+              )}
+            </div>
           </div>
           {imageUrl && showImage && (
             // eslint-disable-next-line @next/next/no-img-element

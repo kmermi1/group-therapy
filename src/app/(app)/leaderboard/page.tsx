@@ -153,6 +153,7 @@ export default async function LeaderboardPage({
           counts={userTaskCount}
           allTime={userTaskAllTime}
           currentUserId={s.kind === "user" ? s.userId : null}
+          tr={tr}
         />
       ) : (
         <TasksView tasks={tasks ?? []} users={users ?? []} counts={userTaskCount} allTime={userTaskAllTime} currentUserId={s.kind === "user" ? s.userId : null} />
@@ -169,6 +170,7 @@ function PeopleView({
   counts,
   allTime,
   currentUserId,
+  tr,
 }: {
   users: { id: string; username: string }[];
   totals: Record<string, number>;
@@ -177,6 +179,7 @@ function PeopleView({
   counts: Record<string, number>;
   allTime: Record<string, number>;
   currentUserId: string | null;
+  tr: (key: Parameters<typeof t>[0], params?: Record<string, string | number>) => string;
 }) {
   if (users.length === 0) {
     return <p className="text-sm text-[var(--color-foreground)]/60">No one in the group yet.</p>;

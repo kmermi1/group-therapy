@@ -59,6 +59,12 @@ export default async function LeaderboardPage({
         .in("task_id", longTermIds)
     : { data: [] as { user_id: string; task_id: string }[] };
 
+  // Include reading plan completions in score
+  const { data: readingComps } = await sb
+    .from("reading_plan_daily_completion")
+    .select("user_id, completed_for_date")
+    .gte("completed_for_date", startStr);
+
   const userTaskCount: Record<string, number> = {};
   const userTotal: Record<string, number> = {};
   for (const c of comps ?? []) {
@@ -66,6 +72,12 @@ export default async function LeaderboardPage({
     userTaskCount[k] = (userTaskCount[k] || 0) + 1;
     userTotal[c.user_id] = (userTotal[c.user_id] || 0) + 1;
   }
+
+  // Add reading plan completions to total
+  for (const c of readingComps ?? []) {
+    userTotal[c.user_id] = (userTotal[c.user_id] || 0) + 1;
+  }
+
   const userTaskAllTime: Record<string, number> = {};
   for (const c of allTimeComps ?? []) {
     userTaskAllTime[`${c.user_id}:${c.task_id}`] = (userTaskAllTime[`${c.user_id}:${c.task_id}`] || 0) + 1;

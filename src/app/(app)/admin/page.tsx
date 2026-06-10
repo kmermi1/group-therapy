@@ -116,6 +116,19 @@ export default async function AdminDashboardPage() {
       </Card>
 
       <Card className="mb-4">
+        <h2 className="font-semibold mb-2">Feedback</h2>
+        <p className="text-xs text-[var(--color-foreground)]/60 mb-3">
+          View feedback and bug reports submitted by group members.
+        </p>
+        <Link
+          href="/admin/feedback"
+          className="block w-full text-center bg-[var(--color-card)] border border-[var(--color-border)] rounded-lg px-4 py-2.5 text-sm font-medium hover:bg-[var(--color-background)]"
+        >
+          View feedback
+        </Link>
+      </Card>
+
+      <Card className="mb-4">
         <h2 className="font-semibold mb-2">Milestone</h2>
         <p className="text-xs text-[var(--color-foreground)]/60 mb-3">
           Started {new Date(group.milestone_started_at).toLocaleDateString()}. Auto-rolls on {DAYS[group.default_start_day]}.

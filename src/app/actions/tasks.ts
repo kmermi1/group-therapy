@@ -88,6 +88,33 @@ export async function archivePersonalTaskAction(formData: FormData) {
   revalidatePath("/today");
 }
 
+export async function editPersonalTaskAction(formData: FormData) {
+  const user = await requireUser();
+  const taskId = String(formData.get("taskId") || "");
+  const title = String(formData.get("title") || "").trim();
+  const description = String(formData.get("description") || "").trim() || null;
+  const frequency = String(formData.get("frequency") || "daily") as "once" | "daily" | "weekly";
+  const target = Math.max(1, Number(formData.get("target") || 1));
+
+  if (!title) throw new Error("Title required.");
+
+  const sb = createAdminClient();
+  const { error } = await sb
+    .from("tasks")
+    .update({
+      title,
+      description,
+      frequency,
+      target_per_milestone: target,
+    })
+    .eq("id", taskId)
+    .eq("group_id", user.groupId)
+    .eq("created_by_user_id", user.userId);
+
+  if (error) throw new Error(error.message);
+  revalidatePath("/today");
+}
+
 export async function editTaskAction(formData: FormData) {
   try {
     const admin = await requireAdmin();

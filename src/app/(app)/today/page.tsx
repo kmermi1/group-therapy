@@ -5,6 +5,7 @@ import { getMilestoneBounds } from "@/app/actions/tasks";
 import { PageHeader } from "@/components/ui";
 import TaskRow from "./TaskRow";
 import AddPersonalTask from "./AddPersonalTask";
+import PersonalTasksSection from "./PersonalTasksSection";
 import PlanCard from "./PlanCard";
 import { todayPlanDay, dayLabel, rangesActiveOnDay, formatRanges, isWithinSchedule, extraOwedOnDay, planDayForDate } from "@/lib/plans";
 import { t } from "@/lib/i18n";
@@ -234,6 +235,38 @@ export default async function TodayPage() {
         const isPersonal = key === "personal";
         if ((!items || items.length === 0) && !isPersonal) return null;
         const label = labels[key];
+        if (isPersonal && items && items.length > 0) {
+          const personalTasksData = items.map((t) => {
+            const isLongTerm = !!t.total_target;
+            const count = isLongTerm ? (totalCounts[t.id] || 0) : (milestoneCounts[t.id] || 0);
+            const target = isLongTerm ? t.total_target! : t.target_per_milestone;
+            const isWeekly = t.frequency === "weekly";
+            const doneToday = doneTodaySet.has(t.id);
+            const doneThisWeek = doneThisWeekSet.has(t.id);
+            return {
+              ...t,
+              count,
+              target,
+              isLongTerm,
+              isWeekly,
+              doneThisWeek,
+              doneToday,
+              forDate: today,
+              imageUrl: signed[t.id],
+              badgeText: label.badgeText,
+              badgeClass: label.badgeClass,
+            };
+          });
+          return (
+            <section key={key} className="mb-7">
+              <SectionHeader icon={label.icon} title={label.title} desc={label.desc} count={items.length} />
+              <PersonalTasksSection tasks={personalTasksData} locale={locale} />
+              <div className="mt-3">
+                <AddPersonalTask locale={locale} />
+              </div>
+            </section>
+          );
+        }
         return (
           <section key={key} className="mb-7">
             <SectionHeader icon={label.icon} title={label.title} desc={label.desc} count={(items ?? []).length} />
@@ -260,18 +293,13 @@ export default async function TodayPage() {
                       imageUrl={signed[t.id]}
                       badgeText={label.badgeText}
                       badgeClass={label.badgeClass}
-                      canDelete={key === "personal"}
+                      canDelete={false}
                       locale={locale}
                     />
                   );
                 })}
               </ul>
             ) : null}
-            {isPersonal && (
-              <div className={items && items.length > 0 ? "mt-3" : ""}>
-                <AddPersonalTask locale={locale} />
-              </div>
-            )}
           </section>
         );
       })}

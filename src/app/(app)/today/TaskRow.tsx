@@ -25,6 +25,7 @@ export default function TaskRow({
   badgeClass,
   canDelete,
   locale,
+  onEdit,
 }: {
   task: Task;
   doneToday: boolean;
@@ -39,6 +40,7 @@ export default function TaskRow({
   badgeClass: string;
   canDelete?: boolean;
   locale: Locale;
+  onEdit?: (task: Task) => void;
 }) {
   const tr = (k: Parameters<typeof t>[0]) => t(k, locale);
   const [optimisticDone, setOptimisticDone] = useState(doneToday);
@@ -140,6 +142,11 @@ export default function TaskRow({
             {imageUrl && (
               <button type="button" onClick={() => setShowImage((v) => !v)} className="text-xs text-[var(--accent)] hover:underline">
                 {showImage ? tr("hideImage") : tr("viewImage")}
+              </button>
+            )}
+            {onEdit && (
+              <button type="button" onClick={() => onEdit(task)} className="text-xs text-[var(--accent)] hover:underline">
+                Edit
               </button>
             )}
             {canDelete && (

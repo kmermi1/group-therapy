@@ -191,7 +191,7 @@ export default async function HistoryPage() {
 
       <Card className="mb-4 overflow-x-auto">
         <div className="text-xs uppercase tracking-wide text-[var(--foreground-mute)] font-medium mb-2">Last 12 weeks</div>
-        <CalendarHeatmap counts={dayCounts} weeks={12} />
+        <CalendarHeatmap counts={dayCounts} weeks={12} endDate={new Date(`${today}T23:59:59Z`)} />
       </Card>
 
       {days.length === 0 ? (

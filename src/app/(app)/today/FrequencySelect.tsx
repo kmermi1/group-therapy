@@ -11,6 +11,8 @@ export default function FrequencySelect({
 }) {
   const [isOpen, setIsOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
+  const buttonRef = useRef<HTMLButtonElement>(null);
+  const [dropdownPos, setDropdownPos] = useState({ top: 0, left: 0, width: 0 });
 
   const options = [
     { value: "once", label: "One-time" },
@@ -30,11 +32,24 @@ export default function FrequencySelect({
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
+  const handleOpenChange = (open: boolean) => {
+    setIsOpen(open);
+    if (open && buttonRef.current) {
+      const rect = buttonRef.current.getBoundingClientRect();
+      setDropdownPos({
+        top: rect.bottom + window.scrollY,
+        left: rect.left + window.scrollX,
+        width: rect.width,
+      });
+    }
+  };
+
   return (
-    <div ref={ref} className="relative z-[999]">
+    <div ref={ref} className="relative">
       <button
+        ref={buttonRef}
         type="button"
-        onClick={() => setIsOpen(!isOpen)}
+        onClick={() => handleOpenChange(!isOpen)}
         className="w-full rounded-lg border border-[var(--color-border)] bg-[var(--color-background)] px-3 py-2.5 text-sm text-left flex items-center justify-between hover:bg-[var(--color-background)]/80 transition-colors"
       >
         {selectedLabel}
@@ -43,7 +58,14 @@ export default function FrequencySelect({
         </svg>
       </button>
       {isOpen && (
-        <div className="absolute top-full left-0 right-0 mt-1 bg-[var(--color-background)] border border-[var(--color-border)] rounded-lg shadow-lg z-[999]">
+        <div
+          className="fixed bg-[var(--color-background)] border border-[var(--color-border)] rounded-lg shadow-lg z-[9999]"
+          style={{
+            top: `${dropdownPos.top + 8}px`,
+            left: `${dropdownPos.left}px`,
+            width: `${dropdownPos.width}px`,
+          }}
+        >
           {options.map((opt) => (
             <button
               key={opt.value}

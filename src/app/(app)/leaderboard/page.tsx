@@ -18,8 +18,17 @@ export default async function LeaderboardPage({
   const view = sp.view === "tasks" ? "tasks" : "people";
 
   const sb = createAdminClient();
-  const { milestoneStart } = await getMilestoneBounds(s.groupId);
-  const startStr = milestoneStart.toISOString().slice(0, 10);
+  const { milestoneStart, group } = await getMilestoneBounds(s.groupId);
+  const timezone = group.timezone || "America/New_York";
+
+  // Format milestone start in the group's timezone for comparison
+  const fmt = new Intl.DateTimeFormat("en-CA", {
+    timeZone: timezone,
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  });
+  const startStr = fmt.format(milestoneStart);
 
   const { data: users } = await sb
     .from("users")

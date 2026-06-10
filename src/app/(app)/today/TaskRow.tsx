@@ -9,6 +9,7 @@ type Task = {
   title: string;
   description: string | null;
   frequency: "once" | "daily" | "weekly";
+  deadline?: string | null;
 };
 
 export default function TaskRow({
@@ -114,6 +115,32 @@ export default function TaskRow({
                 {isDone ? "✓ Done" : "⊙ Pending"}
               </span>
             )}
+            {task.frequency === "once" && task.deadline && !isDone && (() => {
+              const deadlineDate = task.deadline;
+              const today = forDate;
+              const isOverdue = deadlineDate < today;
+              const isDueToday = deadlineDate === today;
+              const dateLabel = new Date(deadlineDate + "T00:00:00").toLocaleDateString();
+              if (isOverdue) {
+                return (
+                  <span className="text-[10px] px-2 py-0.5 rounded-md bg-red-500/15 text-red-600 dark:text-red-300">
+                    ⚠ Overdue {dateLabel}
+                  </span>
+                );
+              }
+              if (isDueToday) {
+                return (
+                  <span className="text-[10px] px-2 py-0.5 rounded-md bg-amber-500/15 text-amber-600 dark:text-amber-300">
+                    📅 Due today
+                  </span>
+                );
+              }
+              return (
+                <span className="text-[10px] px-2 py-0.5 rounded-md bg-slate-500/15 text-slate-600 dark:text-slate-300">
+                  📅 Due {dateLabel}
+                </span>
+              );
+            })()}
             {task.frequency !== "once" && (target > 1 || isLongTerm) && (
               <span className={`text-[10px] numeric px-2 py-0.5 rounded-md ${metTarget ? "bg-emerald-500/15 text-emerald-600 dark:text-emerald-300" : "bg-[var(--surface)] text-[var(--foreground-mute)]"}`}>
                 {optimisticCount}/{target}{isLongTerm ? ` ${tr("allTime")}` : ""}

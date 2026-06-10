@@ -60,6 +60,8 @@ export async function createPersonalTaskAction(formData: FormData) {
   const description = String(formData.get("description") || "").trim() || null;
   const frequency = String(formData.get("frequency") || "daily") as "once" | "daily" | "weekly";
   const target = Math.max(1, Number(formData.get("target") || 1));
+  const deadlineRaw = String(formData.get("deadline") || "").trim();
+  const deadline = deadlineRaw === "" ? null : deadlineRaw;
 
   if (!title) throw new Error("Title required.");
 
@@ -72,6 +74,7 @@ export async function createPersonalTaskAction(formData: FormData) {
     target_per_milestone: target,
     assignee_user_id: user.userId,
     created_by_user_id: user.userId,
+    deadline,
   });
   if (error) throw new Error(error.message);
   revalidatePath("/today");
@@ -98,6 +101,8 @@ export async function editPersonalTaskAction(formData: FormData) {
   const description = String(formData.get("description") || "").trim() || null;
   const frequency = String(formData.get("frequency") || "daily") as "once" | "daily" | "weekly";
   const target = Math.max(1, Number(formData.get("target") || 1));
+  const deadlineRaw = String(formData.get("deadline") || "").trim();
+  const deadline = deadlineRaw === "" ? null : deadlineRaw;
 
   if (!title) throw new Error("Title required.");
 
@@ -109,6 +114,7 @@ export async function editPersonalTaskAction(formData: FormData) {
       description,
       frequency,
       target_per_milestone: target,
+      deadline,
     })
     .eq("id", taskId)
     .eq("group_id", user.groupId)

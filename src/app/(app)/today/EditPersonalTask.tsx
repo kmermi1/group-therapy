@@ -12,6 +12,7 @@ type Task = {
   description: string | null;
   frequency: "once" | "daily" | "weekly";
   target_per_milestone: number;
+  deadline?: string | null;
 };
 
 export default function EditPersonalTask({ task, locale, onClose }: { task: Task; locale: Locale; onClose: () => void }) {
@@ -61,7 +62,13 @@ export default function EditPersonalTask({ task, locale, onClose }: { task: Task
             <Input id="etarget" name="target" type="number" min={1} max={50} defaultValue={task.target_per_milestone} />
           </div>
         ) : (
-          <input type="hidden" name="target" value="1" />
+          <>
+            <input type="hidden" name="target" value="1" />
+            <div>
+              <Label htmlFor="edeadline">Deadline (optional)</Label>
+              <Input id="edeadline" name="deadline" type="date" defaultValue={task.deadline ?? ""} />
+            </div>
+          </>
         )}
         {error && <p className="text-sm text-red-500">{error}</p>}
         <div className="grid grid-cols-2 gap-2">

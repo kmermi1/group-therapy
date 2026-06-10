@@ -11,6 +11,7 @@ type Task = {
   description: string | null;
   frequency: "once" | "daily" | "weekly";
   target_per_milestone: number;
+  deadline?: string | null;
 };
 
 type TaskWithUI = Task & {
@@ -64,6 +65,7 @@ export default function PersonalTasksSection({
               description: task.description,
               frequency: task.frequency,
               target_per_milestone: t.target,
+              deadline: task.deadline,
             })
           }
         />

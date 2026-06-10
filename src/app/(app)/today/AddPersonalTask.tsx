@@ -60,7 +60,13 @@ export default function AddPersonalTask({ locale }: { locale: Locale }) {
             <Input id="ptarget" name="target" type="number" min={1} max={50} defaultValue={1} />
           </div>
         ) : (
-          <input type="hidden" name="target" value="1" />
+          <>
+            <input type="hidden" name="target" value="1" />
+            <div>
+              <Label htmlFor="pdeadline">Deadline (optional)</Label>
+              <Input id="pdeadline" name="deadline" type="date" />
+            </div>
+          </>
         )}
         {error && <p className="text-sm text-red-500">{error}</p>}
         <div className="grid grid-cols-2 gap-2">

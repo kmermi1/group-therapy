@@ -198,12 +198,15 @@ function PeopleView({
             r.id === currentUserId ? "ring-2 ring-[var(--color-accent)]" : ""
           }`}
         >
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-3 mb-2">
             <span className="w-6 text-center text-sm font-bold text-[var(--color-foreground)]/60">{i + 1}</span>
             <span className="flex-1 font-medium">{r.username}</span>
-            <span className="text-sm font-mono">{r.done}/{r.max}</span>
+            <div className="text-right">
+              <div className="text-xs text-[var(--color-foreground)]/60">Done / Min</div>
+              <div className="text-sm font-mono font-bold">{r.done}/{r.max}</div>
+            </div>
           </div>
-          <ProgressBar value={r.done} max={Math.max(1, r.max)} className="mt-2" />
+          <ProgressBar value={r.done} max={Math.max(1, r.max)} className="mt-1" />
         </li>
       ))}
     </ol>

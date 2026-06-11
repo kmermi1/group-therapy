@@ -6,6 +6,14 @@ import { createAdminClient } from "@/lib/supabase/server";
 import { generateGroupCode } from "@/lib/groupCode";
 import { generateUniqueUsername } from "@/lib/username";
 import { setSession, clearSession, getSession } from "@/lib/session";
+import {
+  loginByUser,
+  loginByIp,
+  resetByIp,
+  regenByIp,
+  getClientIp,
+  checkRateLimit,
+} from "@/lib/ratelimit";
 
 export async function createGroupAction(formData: FormData) {
   const groupName = String(formData.get("groupName") || "").trim();
@@ -58,6 +66,10 @@ export async function createGroupAction(formData: FormData) {
 }
 
 export async function previewUsernameAction(groupCode: string, locale: "en" | "tr" = "en"): Promise<{ groupId: string; username: string } | null> {
+  const ip = await getClientIp();
+  await checkRateLimit([
+    { rl: regenByIp, key: `regen:ip:${ip}`, label: "name shuffles" },
+  ]);
   const sb = createAdminClient();
   const { data: group } = await sb.from("groups").select("id").eq("code", groupCode.toUpperCase()).maybeSingle();
   if (!group) return null;
@@ -99,6 +111,16 @@ export async function loginUserAction(formData: FormData): Promise<{ error?: str
   const groupCode = String(formData.get("groupCode") || "").trim().toUpperCase();
   const username = String(formData.get("username") || "").trim();
   const pin = String(formData.get("pin") || "");
+
+  const ip = await getClientIp();
+  try {
+    await checkRateLimit([
+      { rl: loginByUser, key: `user:${groupCode}:${username.toLowerCase()}`, label: "this account" },
+      { rl: loginByIp, key: `ip:${ip}`, label: "your network" },
+    ]);
+  } catch (e) {
+    return { error: (e as Error).message };
+  }
 
   const sb = createAdminClient();
   const { data: group } = await sb.from("groups").select("id").eq("code", groupCode).maybeSingle();
@@ -193,6 +215,16 @@ export async function loginAdminAction(formData: FormData): Promise<{ error?: st
   const username = String(formData.get("username") || "").trim();
   const password = String(formData.get("password") || "");
 
+  const ip = await getClientIp();
+  try {
+    await checkRateLimit([
+      { rl: loginByUser, key: `admin:${groupCode}:${username.toLowerCase()}`, label: "this account" },
+      { rl: loginByIp, key: `ip:${ip}`, label: "your network" },
+    ]);
+  } catch (e) {
+    return { error: (e as Error).message };
+  }
+
   const sb = createAdminClient();
   const { data: group } = await sb.from("groups").select("id").eq("code", groupCode).maybeSingle();
   if (!group) return { error: "Invalid credentials." };
@@ -270,6 +302,11 @@ export async function resetAdminPasswordWithCodeAction(formData: FormData) {
   if (!resetCode || newPassword.length < 6) {
     throw new Error("Valid reset code and password (6+ chars) required.");
   }
+
+  const ip = await getClientIp();
+  await checkRateLimit([
+    { rl: resetByIp, key: `reset:ip:${ip}`, label: "reset attempts" },
+  ]);
 
   const sb = createAdminClient();
 

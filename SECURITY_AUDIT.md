@@ -58,20 +58,18 @@ Tables have `enable row level security` set in migration `0001_init.sql`, but **
 
 ---
 
-### 2. No rate limiting on login / PIN entry — 📋 Open
+### 2. No rate limiting on login / PIN entry — ✅ Fixed (2026-06-11)
 
-`loginUserAction`, `loginAdminAction`, and `resetAdminPasswordWithCodeAction` accept attempts indefinitely with no throttling.
+Implemented with Upstash Redis + `@upstash/ratelimit`. Limits in `src/lib/ratelimit.ts`:
 
-- A 4-digit PIN = **10,000 combinations** — brute-forceable in seconds at network speed.
-- The admin reset code is 8 chars from a constrained alphabet — also brute-forceable without throttling.
+- **`loginByUser`** — 5 attempts / 15 min per (kind, groupCode, username). Protects a specific account from guessing.
+- **`loginByIp`** — 30 attempts / 15 min per IP. Caps total damage one attacker can do across accounts.
+- **`resetByIp`** — 10 attempts / 15 min per IP. Throttles admin password reset code brute force.
+- **`regenByIp`** — 30 / minute per IP. Throttles username regeneration (#8).
 
-**Fix plan:**
+**Fail-open behavior:** When `UPSTASH_REDIS_REST_URL` / `UPSTASH_REDIS_REST_TOKEN` are missing, rate limiting is disabled and a warning is logged in production. The app continues to work. Set these env vars in Vercel for protection.
 
-- Add rate limiting (e.g., `@upstash/ratelimit` + Vercel KV, or a DB-backed counter).
-- Suggested: 5 failed attempts per username per 15 minutes; 20 attempts per IP per 15 minutes.
-- Consider lockout escalation after sustained failures.
-
-**Priority:** Highest remaining real risk. This is the right fix for brute-force concerns, not raising PIN length.
+**Applied in:** `loginUserAction`, `loginAdminAction`, `resetAdminPasswordWithCodeAction`, `previewUsernameAction`.
 
 ---
 
@@ -107,11 +105,11 @@ Added extension allowlist (png/jpg/jpeg/webp/gif) and 5MB size cap to all image-
 
 ---
 
-### 6. Admin password reset code can be brute-forced — 📋 Open (tied to #2)
+### 6. Admin password reset code can be brute-forced — ✅ Fixed (2026-06-11)
 
-The reset code is 8 chars from a non-ambiguous alphabet (~30 chars). Combined with no rate limiting on `resetAdminPasswordWithCodeAction`, it's worth tightening.
+Rate limit applied via `resetByIp` (10 attempts / 15 min per IP) in `resetAdminPasswordWithCodeAction`. With ~6.5×10¹¹ possible codes and 10/15min, brute force is no longer feasible.
 
-**Fix plan:** Tie into the rate limiter from #2. Also consider invalidating all of an admin's outstanding codes when one is consumed.
+**Could still consider (low priority):** Invalidating all of an admin's outstanding codes when one is consumed.
 
 ---
 
@@ -140,13 +138,9 @@ Write one row per sensitive action.
 
 ---
 
-### 8. Username regeneration / enumeration — 📋 Open (tied to #2)
+### 8. Username regeneration / enumeration — ✅ Fixed (2026-06-11)
 
-`/join` lets a prospective user re-roll usernames against a group. With no rate limit, this could be used to enumerate existing members of a known group code.
-
-**Risk:** Low (you need the group code first) but still an information leak.
-
-**Fix plan:** Same rate limiter; cap regenerations per IP per minute.
+Rate limit `regenByIp` applied to `previewUsernameAction` (30 / minute per IP).
 
 ---
 
@@ -213,7 +207,7 @@ Most action handlers verify `group_id`, but spot-check each one — for example,
 
 ## 🔧 Remaining priority order
 
-1. **#2 + #6 + #8** Rate limiting on login / PIN / reset / username regen. This is the highest leverage real fix.
+1. **Set Upstash env vars in Vercel** — `UPSTASH_REDIS_REST_URL` and `UPSTASH_REDIS_REST_TOKEN`. Without these, the rate limiters fail open. **Required to make #2 actually effective in prod.**
 2. **#7** Audit log for admin actions.
 3. **#15** Spot-audit ownership checks in plans/reading/feedback actions.
 4. **#13** Manually verify `task-images` bucket is private.
@@ -226,6 +220,8 @@ Most action handlers verify `group_id`, but spot-check each one — for example,
 
 ## 📝 Change log
 
+- **2026-06-11 (later)**
+  - Fixed #2 / #6 / #8: Rate limiting via Upstash Redis (`src/lib/ratelimit.ts`). Applied to login (user + admin), admin password reset, and username regeneration. Fails open if env vars aren't set.
 - **2026-06-11**
   - Fixed #3: `secure` cookie flag in production.
   - Fixed #5: Image upload validation (extension allowlist + 5MB cap) on admin and personal task actions.

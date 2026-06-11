@@ -13,6 +13,7 @@ import {
   regenByIp,
   getClientIp,
   checkRateLimit,
+  RateLimitExceededError,
 } from "@/lib/ratelimit";
 
 export async function createGroupAction(formData: FormData) {
@@ -164,8 +165,11 @@ export async function loginUserAction(formData: FormData): Promise<{ error?: str
       { rl: loginByIp, key: `ip:${ip}`, label: "your network" },
     ]);
   } catch (e) {
-    await recordFailedLogin({ groupId: group?.id ?? null, kind: "user", attemptedUsername: username, ip, rateLimited: true });
-    return { error: (e as Error).message };
+    if (e instanceof RateLimitExceededError) {
+      await recordFailedLogin({ groupId: group?.id ?? null, kind: "user", attemptedUsername: username, ip, rateLimited: true });
+      return { error: e.message };
+    }
+    return { error: "Login error. Please try again." };
   }
 
   if (!group) return { error: "Invalid credentials." };
@@ -280,8 +284,11 @@ export async function loginAdminAction(formData: FormData): Promise<{ error?: st
       { rl: loginByIp, key: `ip:${ip}`, label: "your network" },
     ]);
   } catch (e) {
-    await recordFailedLogin({ groupId: group?.id ?? null, kind: "admin", attemptedUsername: username, ip, rateLimited: true });
-    return { error: (e as Error).message };
+    if (e instanceof RateLimitExceededError) {
+      await recordFailedLogin({ groupId: group?.id ?? null, kind: "admin", attemptedUsername: username, ip, rateLimited: true });
+      return { error: e.message };
+    }
+    return { error: "Login error. Please try again." };
   }
 
   if (!group) return { error: "Invalid credentials." };

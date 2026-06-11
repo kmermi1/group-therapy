@@ -100,8 +100,19 @@ export async function getClientIp(): Promise<string> {
   return "unknown";
 }
 
-// Checks one or more limiters. Throws a friendly error if any are exceeded.
-// Returns nothing on success. Fail-open when limiter is null (no Redis).
+// Custom error so callers can tell "rate limit hit" apart from any other
+// error (including Upstash network failures).
+export class RateLimitExceededError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = "RateLimitExceededError";
+  }
+}
+
+// Checks one or more limiters. Throws RateLimitExceededError if any are
+// exceeded. Returns nothing on success. Fail-open when limiter is null
+// (no Redis configured) OR when the network call to Upstash fails — we
+// don't want a Redis outage to make logins impossible.
 export async function checkRateLimit(
   limiters: Array<{ rl: Ratelimit | null; key: string; label: string } | null>
 ): Promise<void> {
@@ -109,12 +120,21 @@ export async function checkRateLimit(
     if (!entry) continue;
     const { rl, key, label } = entry;
     if (!rl) continue;
-    const { success, reset } = await rl.limit(key);
+    let result;
+    try {
+      result = await rl.limit(key);
+    } catch (e) {
+      // Network / Upstash failure: fail open so users can still log in.
+      // eslint-disable-next-line no-console
+      console.warn(`[ratelimit] Upstash call failed; allowing request. ${(e as Error).message}`);
+      continue;
+    }
+    const { success, reset } = result;
     if (!success) {
       const seconds = Math.max(1, Math.ceil((reset - Date.now()) / 1000));
       const minutes = Math.ceil(seconds / 60);
       const wait = seconds < 60 ? `${seconds}s` : `${minutes}m`;
-      throw new Error(
+      throw new RateLimitExceededError(
         `Too many attempts (${label}). Please wait ${wait} and try again.`
       );
     }

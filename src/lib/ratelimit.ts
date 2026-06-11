@@ -2,24 +2,36 @@ import { Ratelimit } from "@upstash/ratelimit";
 import { Redis } from "@upstash/redis";
 import { headers } from "next/headers";
 
-// Returns the Redis instance if credentials are configured, otherwise null.
-// We fail OPEN when Upstash isn't configured: the app continues to work,
-// but rate limiting is disabled. A warning is logged in production.
+// Returns the Redis instance if credentials are configured AND valid,
+// otherwise null. We fail OPEN: app keeps working, rate limiting is disabled,
+// a warning is logged in production.
 let warned = false;
+function warnOnce(msg: string) {
+  if (warned || process.env.NODE_ENV !== "production") return;
+  // eslint-disable-next-line no-console
+  console.warn(msg);
+  warned = true;
+}
+
 function getRedis(): Redis | null {
   const url = process.env.UPSTASH_REDIS_REST_URL;
   const token = process.env.UPSTASH_REDIS_REST_TOKEN;
   if (!url || !token) {
-    if (!warned && process.env.NODE_ENV === "production") {
-      // eslint-disable-next-line no-console
-      console.warn(
-        "[ratelimit] UPSTASH_REDIS_REST_URL / UPSTASH_REDIS_REST_TOKEN not set — rate limiting is disabled. This is a security risk in production."
-      );
-      warned = true;
-    }
+    warnOnce("[ratelimit] UPSTASH_REDIS_REST_URL / UPSTASH_REDIS_REST_TOKEN not set — rate limiting is disabled.");
     return null;
   }
-  return new Redis({ url, token });
+  // Validate URL format before constructing so a bad value doesn't crash the
+  // module at import time (which would break `next build`).
+  if (!url.startsWith("https://")) {
+    warnOnce(`[ratelimit] UPSTASH_REDIS_REST_URL is not an https URL — rate limiting disabled. Got: ${url.slice(0, 20)}...`);
+    return null;
+  }
+  try {
+    return new Redis({ url, token });
+  } catch (e) {
+    warnOnce(`[ratelimit] Failed to construct Upstash client — rate limiting disabled. ${(e as Error).message}`);
+    return null;
+  }
 }
 
 const redis = getRedis();

@@ -13,9 +13,20 @@ function warnOnce(msg: string) {
   warned = true;
 }
 
+// Defensive cleanup for values pasted with surrounding quotes (a common
+// Vercel env-var mistake when copying from .env files).
+function cleanEnv(v: string | undefined): string | undefined {
+  if (!v) return v;
+  let s = v.trim();
+  if ((s.startsWith('"') && s.endsWith('"')) || (s.startsWith("'") && s.endsWith("'"))) {
+    s = s.slice(1, -1).trim();
+  }
+  return s;
+}
+
 function getRedis(): Redis | null {
-  const url = process.env.UPSTASH_REDIS_REST_URL;
-  const token = process.env.UPSTASH_REDIS_REST_TOKEN;
+  const url = cleanEnv(process.env.UPSTASH_REDIS_REST_URL);
+  const token = cleanEnv(process.env.UPSTASH_REDIS_REST_TOKEN);
   if (!url || !token) {
     warnOnce("[ratelimit] UPSTASH_REDIS_REST_URL / UPSTASH_REDIS_REST_TOKEN not set — rate limiting is disabled.");
     return null;

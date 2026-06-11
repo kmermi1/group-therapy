@@ -7,10 +7,29 @@ export const revalidate = 0;
 
 type Check = { name: string; ok: boolean | "warn"; detail: string };
 
+function stripQuotes(v: string | undefined): string | undefined {
+  if (!v) return v;
+  let s = v.trim();
+  if ((s.startsWith('"') && s.endsWith('"')) || (s.startsWith("'") && s.endsWith("'"))) {
+    s = s.slice(1, -1).trim();
+  }
+  return s;
+}
+
 async function probeUpstash(): Promise<Check[]> {
   const out: Check[] = [];
-  const url = process.env.UPSTASH_REDIS_REST_URL;
-  const token = process.env.UPSTASH_REDIS_REST_TOKEN;
+  const rawUrl = process.env.UPSTASH_REDIS_REST_URL;
+  const rawToken = process.env.UPSTASH_REDIS_REST_TOKEN;
+  const url = stripQuotes(rawUrl);
+  const token = stripQuotes(rawToken);
+
+  if (rawUrl && rawUrl !== url) {
+    out.push({
+      name: "Env var quoting",
+      ok: "warn",
+      detail: "URL had surrounding quotes that were stripped at runtime. Please remove them in Vercel.",
+    });
+  }
 
   out.push({
     name: "UPSTASH_REDIS_REST_URL env var",

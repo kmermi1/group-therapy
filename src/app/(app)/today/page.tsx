@@ -32,14 +32,13 @@ export default async function TodayPage() {
   const timezone = group.timezone || "America/New_York";
   const today = todayDateString(new Date(), timezone);
 
-  // Cleanup: permanently delete one-time personal tasks archived more than 30 days ago
+  // Cleanup: permanently delete personal tasks archived more than 30 days ago
   const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString();
   await sb
     .from("tasks")
     .delete()
     .eq("group_id", user.groupId)
     .eq("created_by_user_id", user.userId)
-    .eq("frequency", "once")
     .not("archived_at", "is", null)
     .lt("archived_at", thirtyDaysAgo);
 
@@ -51,13 +50,12 @@ export default async function TodayPage() {
     .or(`assignee_user_id.is.null,assignee_user_id.eq.${user.userId}`)
     .order("created_at", { ascending: false });
 
-  // Fetch archived one-time personal tasks (within 30 day window)
+  // Fetch all archived personal tasks (within 30 day window)
   const { data: archivedPersonal } = await sb
     .from("tasks")
     .select("*")
     .eq("group_id", user.groupId)
     .eq("created_by_user_id", user.userId)
-    .eq("frequency", "once")
     .not("archived_at", "is", null)
     .gte("archived_at", thirtyDaysAgo)
     .order("archived_at", { ascending: false });
@@ -335,7 +333,7 @@ export default async function TodayPage() {
               <span className="text-xs font-mono text-[var(--color-foreground)]/50">{archivedPersonal.length}</span>
             </div>
             <p className="text-xs text-[var(--color-foreground)]/60 ml-7">
-              Completed one-time tasks. Auto-deleted 30 days after completion. Uncheck to restore.
+              Completed one-time tasks and deleted personal tasks. Permanently removed 30 days after archiving. Click ↺ to restore.
             </p>
           </header>
           <ul className="space-y-3">
@@ -343,6 +341,10 @@ export default async function TodayPage() {
               const archivedDate = new Date(t.archived_at!);
               const deleteDate = new Date(archivedDate.getTime() + 30 * 24 * 60 * 60 * 1000);
               const daysUntilDelete = Math.max(0, Math.ceil((deleteDate.getTime() - Date.now()) / (24 * 60 * 60 * 1000)));
+              const isCompletedOneTime = t.frequency === "once";
+              const statusBadge = isCompletedOneTime
+                ? { label: "✓ Completed", cls: "bg-emerald-500/20 text-emerald-700 dark:text-emerald-300" }
+                : { label: "🗑 Deleted", cls: "bg-slate-500/20 text-slate-700 dark:text-slate-300" };
               return (
                 <li
                   key={t.id}
@@ -354,16 +356,20 @@ export default async function TodayPage() {
                       <button
                         type="submit"
                         aria-label="Restore task"
-                        className="mt-0.5 h-7 w-7 rounded-lg border-2 flex items-center justify-center transition shrink-0 bg-[var(--accent)] border-[var(--accent)] text-[var(--accent-fg)]"
+                        title="Restore"
+                        className="mt-0.5 h-7 w-7 rounded-lg border-2 border-[var(--border)] flex items-center justify-center transition shrink-0 hover:border-[var(--accent)] hover:text-[var(--accent)] text-[var(--foreground-mute)]"
                       >
-                        <span className="text-sm leading-none font-bold">✓</span>
+                        <span className="text-sm leading-none font-bold">↺</span>
                       </button>
                     </form>
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2 flex-wrap">
                         <h3 className="font-semibold text-[15px] line-through opacity-70">{t.title}</h3>
-                        <span className="text-[10px] uppercase tracking-wide px-2 py-0.5 rounded-md font-medium bg-emerald-500/20 text-emerald-700 dark:text-emerald-300">
-                          ✓ Completed
+                        <span className={`text-[10px] uppercase tracking-wide px-2 py-0.5 rounded-md font-medium ${statusBadge.cls}`}>
+                          {statusBadge.label}
+                        </span>
+                        <span className="text-[10px] uppercase tracking-wide px-2 py-0.5 rounded-md bg-[var(--surface)] text-[var(--foreground-mute)]">
+                          {t.frequency}
                         </span>
                         <span className={`text-[10px] px-2 py-0.5 rounded-md ${
                           daysUntilDelete <= 7
@@ -379,7 +385,7 @@ export default async function TodayPage() {
                         </p>
                       )}
                       <p className="text-[11px] text-[var(--foreground-mute)] mt-2">
-                        Completed {archivedDate.toLocaleDateString()}
+                        {isCompletedOneTime ? "Completed" : "Archived"} {archivedDate.toLocaleDateString()}
                       </p>
                     </div>
                   </div>

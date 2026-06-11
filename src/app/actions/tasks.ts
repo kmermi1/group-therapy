@@ -122,7 +122,7 @@ export async function restoreArchivedPersonalTaskAction(formData: FormData) {
   if (!taskId) throw new Error("Missing taskId.");
 
   const sb = createAdminClient();
-  // Verify ownership
+  // Verify ownership (any personal task, any frequency)
   const { data: task } = await sb
     .from("tasks")
     .select("id, group_id, created_by_user_id, frequency")
@@ -131,18 +131,20 @@ export async function restoreArchivedPersonalTaskAction(formData: FormData) {
   if (
     !task ||
     task.group_id !== user.groupId ||
-    task.created_by_user_id !== user.userId ||
-    task.frequency !== "once"
+    task.created_by_user_id !== user.userId
   ) {
     throw new Error("Task not found.");
   }
 
-  // Delete all completions for this user+task (one-time tasks have only one)
-  await sb
-    .from("task_completions")
-    .delete()
-    .eq("task_id", taskId)
-    .eq("user_id", user.userId);
+  // For one-time tasks: delete the completion so it's unchecked on restore.
+  // For recurring tasks: keep history intact, just restore visibility.
+  if (task.frequency === "once") {
+    await sb
+      .from("task_completions")
+      .delete()
+      .eq("task_id", taskId)
+      .eq("user_id", user.userId);
+  }
 
   // Clear archived_at to restore
   await sb.from("tasks").update({ archived_at: null }).eq("id", taskId);

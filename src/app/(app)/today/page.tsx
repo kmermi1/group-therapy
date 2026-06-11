@@ -333,7 +333,7 @@ export default async function TodayPage() {
               <span className="text-xs font-mono text-[var(--color-foreground)]/50">{archivedPersonal.length}</span>
             </div>
             <p className="text-xs text-[var(--color-foreground)]/60 ml-7">
-              Completed one-time tasks and deleted personal tasks. Permanently removed 30 days after archiving. Click ↺ to restore.
+              Your deleted and completed personal tasks. Permanently removed 30 days after archiving. Click ↺ to restore.
             </p>
           </header>
           <ul className="space-y-3">

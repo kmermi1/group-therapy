@@ -27,7 +27,9 @@ export async function createTaskAction(formData: FormData) {
   const sb = createAdminClient();
   let image_path: string | null = null;
   if (image && image.size > 0) {
-    const ext = (image.name.split(".").pop() || "bin").toLowerCase();
+    const ext = (image.name.split(".").pop() || "").toLowerCase();
+    if (!ALLOWED_IMAGE_EXTS.has(ext)) throw new Error("Unsupported image type (png/jpg/jpeg/webp/gif).");
+    if (image.size > MAX_IMAGE_SIZE) throw new Error("Image too large (max 5MB).");
     const path = `${admin.groupId}/${crypto.randomUUID()}.${ext}`;
     const buf = Buffer.from(await image.arrayBuffer());
     const { error } = await sb.storage.from(BUCKET).upload(path, buf, {
@@ -54,6 +56,9 @@ export async function createTaskAction(formData: FormData) {
   revalidatePath("/today");
 }
 
+const ALLOWED_IMAGE_EXTS = new Set(["png", "jpg", "jpeg", "webp", "gif"]);
+const MAX_IMAGE_SIZE = 5 * 1024 * 1024; // 5MB
+
 export async function createPersonalTaskAction(formData: FormData) {
   const user = await requireUser();
   const title = String(formData.get("title") || "").trim();
@@ -62,14 +67,31 @@ export async function createPersonalTaskAction(formData: FormData) {
   const target = Math.max(1, Number(formData.get("target") || 1));
   const deadlineRaw = String(formData.get("deadline") || "").trim();
   const deadline = deadlineRaw === "" ? null : deadlineRaw;
+  const image = formData.get("image") as File | null;
 
   if (!title) throw new Error("Title required.");
 
   const sb = createAdminClient();
+  let image_path: string | null = null;
+  if (image && image.size > 0) {
+    const ext = (image.name.split(".").pop() || "").toLowerCase();
+    if (!ALLOWED_IMAGE_EXTS.has(ext)) throw new Error("Unsupported image type (png/jpg/jpeg/webp/gif).");
+    if (image.size > MAX_IMAGE_SIZE) throw new Error("Image too large (max 5MB).");
+    const path = `${user.groupId}/${crypto.randomUUID()}.${ext}`;
+    const buf = Buffer.from(await image.arrayBuffer());
+    const { error: upErr } = await sb.storage.from(BUCKET).upload(path, buf, {
+      contentType: image.type || "application/octet-stream",
+      upsert: false,
+    });
+    if (upErr) throw new Error("Image upload failed: " + upErr.message);
+    image_path = path;
+  }
+
   const { error } = await sb.from("tasks").insert({
     group_id: user.groupId,
     title,
     description,
+    image_path,
     frequency,
     target_per_milestone: target,
     assignee_user_id: user.userId,
@@ -137,19 +159,58 @@ export async function editPersonalTaskAction(formData: FormData) {
   const target = Math.max(1, Number(formData.get("target") || 1));
   const deadlineRaw = String(formData.get("deadline") || "").trim();
   const deadline = deadlineRaw === "" ? null : deadlineRaw;
+  const removeImage = formData.get("removeImage") === "on";
+  const image = formData.get("image") as File | null;
 
   if (!title) throw new Error("Title required.");
 
   const sb = createAdminClient();
+
+  // Verify ownership and get existing image
+  const { data: existing } = await sb
+    .from("tasks")
+    .select("id, group_id, created_by_user_id, image_path")
+    .eq("id", taskId)
+    .maybeSingle();
+  if (!existing || existing.group_id !== user.groupId || existing.created_by_user_id !== user.userId) {
+    throw new Error("Task not found.");
+  }
+
+  let image_path: string | null | undefined = undefined;
+  if (image && image.size > 0) {
+    const ext = (image.name.split(".").pop() || "").toLowerCase();
+    if (!ALLOWED_IMAGE_EXTS.has(ext)) throw new Error("Unsupported image type (png/jpg/jpeg/webp/gif).");
+    if (image.size > MAX_IMAGE_SIZE) throw new Error("Image too large (max 5MB).");
+    const path = `${user.groupId}/${crypto.randomUUID()}.${ext}`;
+    const buf = Buffer.from(await image.arrayBuffer());
+    const { error: upErr } = await sb.storage.from(BUCKET).upload(path, buf, {
+      contentType: image.type || "application/octet-stream",
+      upsert: false,
+    });
+    if (upErr) throw new Error("Image upload failed: " + upErr.message);
+    image_path = path;
+    if (existing.image_path) {
+      await sb.storage.from(BUCKET).remove([existing.image_path]).catch(() => undefined);
+    }
+  } else if (removeImage) {
+    image_path = null;
+    if (existing.image_path) {
+      await sb.storage.from(BUCKET).remove([existing.image_path]).catch(() => undefined);
+    }
+  }
+
+  const update: Record<string, unknown> = {
+    title,
+    description,
+    frequency,
+    target_per_milestone: target,
+    deadline,
+  };
+  if (image_path !== undefined) update.image_path = image_path;
+
   const { error } = await sb
     .from("tasks")
-    .update({
-      title,
-      description,
-      frequency,
-      target_per_milestone: target,
-      deadline,
-    })
+    .update(update)
     .eq("id", taskId)
     .eq("group_id", user.groupId)
     .eq("created_by_user_id", user.userId);
@@ -185,20 +246,18 @@ export async function editTaskAction(formData: FormData) {
 
     let image_path: string | null | undefined = undefined;
     if (image && image.size > 0) {
-      console.log("Uploading image:", image.name);
-      const ext = (image.name.split(".").pop() || "bin").toLowerCase();
+      const ext = (image.name.split(".").pop() || "").toLowerCase();
+      if (!ALLOWED_IMAGE_EXTS.has(ext)) throw new Error("Unsupported image type (png/jpg/jpeg/webp/gif).");
+      if (image.size > MAX_IMAGE_SIZE) throw new Error("Image too large (max 5MB).");
       const path = `${admin.groupId}/${crypto.randomUUID()}.${ext}`;
       const buf = Buffer.from(await image.arrayBuffer());
-      console.log("Image buffer size:", buf.length);
       const { error } = await sb.storage.from("task-images").upload(path, buf, {
         contentType: image.type || "application/octet-stream",
         upsert: false,
       });
       if (error) {
-        console.error("Upload error:", error);
         throw new Error("Image upload failed: " + error.message);
       }
-      console.log("Image uploaded successfully:", path);
       image_path = path;
       if (existing.image_path) {
         await sb.storage.from("task-images").remove([existing.image_path]).catch(() => undefined);

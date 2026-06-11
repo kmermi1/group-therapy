@@ -71,6 +71,11 @@ export default function AddPersonalTask({ locale }: { locale: Locale }) {
             </p>
           </>
         )}
+        <div>
+          <Label htmlFor="pimage">Image (optional)</Label>
+          <input id="pimage" name="image" type="file" accept="image/*" className="text-sm w-full" />
+          <p className="text-xs text-[var(--color-foreground)]/60 mt-1">PNG, JPG, WEBP, or GIF. Max 5MB.</p>
+        </div>
         {error && <p className="text-sm text-red-500">{error}</p>}
         <div className="grid grid-cols-2 gap-2">
           <Button type="submit" disabled={pending}>{pending ? tr("adding") : tr("addTask")}</Button>

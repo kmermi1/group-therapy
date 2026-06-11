@@ -13,6 +13,7 @@ type Task = {
   frequency: "once" | "daily" | "weekly";
   target_per_milestone: number;
   deadline?: string | null;
+  image_path?: string | null;
 };
 
 export default function EditPersonalTask({ task, locale, onClose }: { task: Task; locale: Locale; onClose: () => void }) {
@@ -70,6 +71,23 @@ export default function EditPersonalTask({ task, locale, onClose }: { task: Task
             </div>
           </>
         )}
+        <div>
+          <Label htmlFor="eimage">Image (optional)</Label>
+          {task.image_path ? (
+            <p className="text-xs text-[var(--color-foreground)]/60 mb-2">
+              An image is already attached. Upload a new one to replace, or check the box below to remove.
+            </p>
+          ) : (
+            <p className="text-xs text-[var(--color-foreground)]/60 mb-2">PNG, JPG, WEBP, or GIF. Max 5MB.</p>
+          )}
+          <input id="eimage" name="image" type="file" accept="image/*" className="text-sm w-full" />
+          {task.image_path && (
+            <label className="flex items-center gap-2 mt-2 text-sm">
+              <input type="checkbox" name="removeImage" />
+              Remove existing image
+            </label>
+          )}
+        </div>
         {error && <p className="text-sm text-red-500">{error}</p>}
         <div className="grid grid-cols-2 gap-2">
           <Button type="submit" disabled={pending}>{pending ? "Saving..." : "Save"}</Button>

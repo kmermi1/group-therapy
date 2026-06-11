@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { requireAdmin, rotateAdminInviteAction } from "@/app/actions/auth";
+import { requireAdmin, rotateAdminInviteAction, unlockAccountAction } from "@/app/actions/auth";
 import { createAdminClient } from "@/lib/supabase/server";
 import {
   getMilestoneBounds,
@@ -38,6 +38,24 @@ export default async function AdminDashboardPage() {
     .select("id, username, last_seen_at")
     .eq("group_id", admin.groupId)
     .is("archived_at", null);
+
+  // Locked accounts (users + admins) for the dashboard alert card.
+  const [{ data: lockedUsers }, { data: lockedAdmins }] = await Promise.all([
+    sb
+      .from("users")
+      .select("id, username, locked_at")
+      .eq("group_id", admin.groupId)
+      .not("locked_at", "is", null),
+    sb
+      .from("admins")
+      .select("id, username, locked_at")
+      .eq("group_id", admin.groupId)
+      .not("locked_at", "is", null),
+  ]);
+  const lockedAccounts = [
+    ...((lockedUsers ?? []).map((u) => ({ id: u.id, username: u.username, locked_at: u.locked_at as string, kind: "user" as const }))),
+    ...((lockedAdmins ?? []).map((a) => ({ id: a.id, username: a.username, locked_at: a.locked_at as string, kind: "admin" as const }))),
+  ].sort((a, b) => (a.locked_at < b.locked_at ? 1 : -1));
 
   const { data: tasks } = await sb
     .from("tasks")
@@ -160,6 +178,43 @@ export default async function AdminDashboardPage() {
           <Button type="submit" variant="secondary">Save</Button>
         </form>
       </Card>
+
+      {lockedAccounts.length > 0 && (
+        <Card className="mb-4 border-red-500/40">
+          <h2 className="font-semibold mb-2 text-red-600 dark:text-red-300">🔒 Locked accounts ({lockedAccounts.length})</h2>
+          <p className="text-xs text-[var(--color-foreground)]/60 mb-3">
+            These accounts hit the 10-failure threshold within 24 hours and were auto-locked. Unlock to allow login again.
+          </p>
+          <ul className="space-y-2">
+            {lockedAccounts.map((acct) => (
+              <li key={`${acct.kind}:${acct.id}`} className="rounded-lg border border-[var(--border)] bg-[var(--surface)] p-3 flex items-center gap-2">
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-2">
+                    <span className="font-medium truncate">{acct.username}</span>
+                    <span className={`text-[10px] uppercase tracking-wide px-1.5 py-0.5 rounded ${
+                      acct.kind === "admin"
+                        ? "bg-amber-500/20 text-amber-700 dark:text-amber-300"
+                        : "bg-slate-500/20 text-slate-700 dark:text-slate-300"
+                    }`}>
+                      {acct.kind}
+                    </span>
+                  </div>
+                  <div className="text-[11px] text-[var(--color-foreground)]/60">
+                    Locked {new Date(acct.locked_at).toLocaleString()}
+                  </div>
+                </div>
+                <form action={unlockAccountAction}>
+                  <input type="hidden" name="kind" value={acct.kind} />
+                  <input type="hidden" name="accountId" value={acct.id} />
+                  <button className="text-xs px-3 py-1.5 rounded-lg border border-[var(--border)] bg-[var(--card)] hover:bg-[var(--background)] font-medium">
+                    Unlock
+                  </button>
+                </form>
+              </li>
+            ))}
+          </ul>
+        </Card>
+      )}
 
       <h2 className="text-sm font-semibold mb-2 text-[var(--color-foreground)]/70">Members ({users?.length ?? 0})</h2>
       <div className="space-y-2 mb-6">

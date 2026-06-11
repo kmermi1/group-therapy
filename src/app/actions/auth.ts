@@ -107,6 +107,9 @@ export async function joinGroupAction(formData: FormData) {
   redirect("/today");
 }
 
+const LOCKOUT_THRESHOLD = 10; // failures before account is locked
+const LOCKOUT_WINDOW_HOURS = 24;
+
 async function recordFailedLogin(opts: {
   groupId: string | null;
   kind: "user" | "admin";
@@ -123,6 +126,27 @@ async function recordFailedLogin(opts: {
     ip: opts.ip.slice(0, 64),
     rate_limited: opts.rateLimited ?? false,
   });
+
+  // Auto-lock the account if it crosses the threshold within the window.
+  const windowStart = new Date(Date.now() - LOCKOUT_WINDOW_HOURS * 60 * 60 * 1000).toISOString();
+  const { count } = await sb
+    .from("failed_logins")
+    .select("*", { count: "exact", head: true })
+    .eq("group_id", opts.groupId)
+    .eq("kind", opts.kind)
+    .eq("attempted_username", opts.attemptedUsername.slice(0, 100))
+    .gt("created_at", windowStart);
+
+  if ((count ?? 0) >= LOCKOUT_THRESHOLD) {
+    const table = opts.kind === "user" ? "users" : "admins";
+    // Set locked_at only if not already locked. Match on group + username.
+    await sb
+      .from(table)
+      .update({ locked_at: new Date().toISOString() })
+      .eq("group_id", opts.groupId)
+      .eq("username", opts.attemptedUsername)
+      .is("locked_at", null);
+  }
 }
 
 export async function loginUserAction(formData: FormData): Promise<{ error?: string }> {
@@ -156,6 +180,11 @@ export async function loginUserAction(formData: FormData): Promise<{ error?: str
   if (!user) {
     await recordFailedLogin({ groupId: group.id, kind: "user", attemptedUsername: username, ip });
     return { error: "Invalid credentials." };
+  }
+
+  // Account lockout: block login even if credentials would be correct.
+  if (user.locked_at) {
+    return { error: "Account locked due to too many failed attempts. Contact your admin to unlock." };
   }
 
   const ok = await bcrypt.compare(pin, user.pin_hash);
@@ -268,6 +297,10 @@ export async function loginAdminAction(formData: FormData): Promise<{ error?: st
     return { error: "Invalid credentials." };
   }
 
+  if (admin.locked_at) {
+    return { error: "Account locked due to too many failed attempts. Use the password reset flow or contact another admin." };
+  }
+
   const ok = await bcrypt.compare(password, admin.password_hash);
   if (!ok) {
     await recordFailedLogin({ groupId: group.id, kind: "admin", attemptedUsername: username, ip });
@@ -358,9 +391,10 @@ export async function resetAdminPasswordWithCodeAction(formData: FormData) {
   // Update password and mark code as used
   const passwordHash = await bcrypt.hash(newPassword, 10);
 
+  // Reset clears any lockout — the user demonstrably owned the reset code.
   const { error: updateErr } = await sb
     .from("admins")
-    .update({ password_hash: passwordHash })
+    .update({ password_hash: passwordHash, locked_at: null })
     .eq("id", resetRecord.admin_id);
 
   if (updateErr) throw new Error(updateErr.message);
@@ -373,6 +407,28 @@ export async function resetAdminPasswordWithCodeAction(formData: FormData) {
   if (useErr) throw new Error(useErr.message);
 
   return { success: true };
+}
+
+export async function unlockAccountAction(formData: FormData) {
+  const admin = await requireAdmin();
+  const kind = String(formData.get("kind") || "");
+  const accountId = String(formData.get("accountId") || "");
+  if (kind !== "user" && kind !== "admin") throw new Error("Invalid kind.");
+  if (!accountId) throw new Error("Missing accountId.");
+
+  const sb = createAdminClient();
+  const table = kind === "user" ? "users" : "admins";
+  const { data: row } = await sb
+    .from(table)
+    .select("id, group_id")
+    .eq("id", accountId)
+    .maybeSingle();
+  if (!row || row.group_id !== admin.groupId) throw new Error("Not found.");
+
+  await sb.from(table).update({ locked_at: null }).eq("id", accountId);
+  const { revalidatePath } = await import("next/cache");
+  revalidatePath("/admin");
+  revalidatePath("/admin/settings");
 }
 
 export async function ackFailedLoginsAction() {

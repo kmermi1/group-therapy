@@ -221,6 +221,7 @@ Most action handlers verify `group_id`, but spot-check each one — for example,
 ## 📝 Change log
 
 - **2026-06-11 (latest)**
+  - Account lockout: 10 failed attempts within 24 hours auto-locks the account (`locked_at` column on users + admins). Login is blocked with a clear message ("Account locked, contact your admin"). Admins see a "🔒 Locked accounts" card on the dashboard with an Unlock button. Admin password reset clears the lockout as a side effect (since the user demonstrated they own the reset code).
   - Added failed-login alerting: every failed login is recorded in `failed_logins` (with kind, attempted username, IP, rate-limit flag). When admins load any app page, a modal summarizes new attempts since their last ack. Each admin has their own ack cursor (`admin_failed_login_acks`).
 - **2026-06-11 (later)**
   - Fixed #2 / #6 / #8: Rate limiting via Upstash Redis (`src/lib/ratelimit.ts`). Applied to login (user + admin), admin password reset, and username regeneration. Fails open if env vars aren't set.

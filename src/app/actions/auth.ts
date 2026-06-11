@@ -107,23 +107,43 @@ export async function joinGroupAction(formData: FormData) {
   redirect("/today");
 }
 
+async function recordFailedLogin(opts: {
+  groupId: string | null;
+  kind: "user" | "admin";
+  attemptedUsername: string;
+  ip: string;
+  rateLimited?: boolean;
+}) {
+  if (!opts.groupId) return; // can't attribute if group code was invalid
+  const sb = createAdminClient();
+  await sb.from("failed_logins").insert({
+    group_id: opts.groupId,
+    kind: opts.kind,
+    attempted_username: opts.attemptedUsername.slice(0, 100),
+    ip: opts.ip.slice(0, 64),
+    rate_limited: opts.rateLimited ?? false,
+  });
+}
+
 export async function loginUserAction(formData: FormData): Promise<{ error?: string }> {
   const groupCode = String(formData.get("groupCode") || "").trim().toUpperCase();
   const username = String(formData.get("username") || "").trim();
   const pin = String(formData.get("pin") || "");
 
   const ip = await getClientIp();
+  const sb = createAdminClient();
+  const { data: group } = await sb.from("groups").select("id").eq("code", groupCode).maybeSingle();
+
   try {
     await checkRateLimit([
       { rl: loginByUser, key: `user:${groupCode}:${username.toLowerCase()}`, label: "this account" },
       { rl: loginByIp, key: `ip:${ip}`, label: "your network" },
     ]);
   } catch (e) {
+    await recordFailedLogin({ groupId: group?.id ?? null, kind: "user", attemptedUsername: username, ip, rateLimited: true });
     return { error: (e as Error).message };
   }
 
-  const sb = createAdminClient();
-  const { data: group } = await sb.from("groups").select("id").eq("code", groupCode).maybeSingle();
   if (!group) return { error: "Invalid credentials." };
 
   const { data: user } = await sb
@@ -133,10 +153,16 @@ export async function loginUserAction(formData: FormData): Promise<{ error?: str
     .eq("username", username)
     .is("archived_at", null)
     .maybeSingle();
-  if (!user) return { error: "Invalid credentials." };
+  if (!user) {
+    await recordFailedLogin({ groupId: group.id, kind: "user", attemptedUsername: username, ip });
+    return { error: "Invalid credentials." };
+  }
 
   const ok = await bcrypt.compare(pin, user.pin_hash);
-  if (!ok) return { error: "Invalid credentials." };
+  if (!ok) {
+    await recordFailedLogin({ groupId: group.id, kind: "user", attemptedUsername: username, ip });
+    return { error: "Invalid credentials." };
+  }
 
   await sb.from("users").update({ last_seen_at: new Date().toISOString() }).eq("id", user.id);
   const locale: "en" | "tr" = user.language === "tr" ? "tr" : "en";
@@ -216,17 +242,19 @@ export async function loginAdminAction(formData: FormData): Promise<{ error?: st
   const password = String(formData.get("password") || "");
 
   const ip = await getClientIp();
+  const sb = createAdminClient();
+  const { data: group } = await sb.from("groups").select("id").eq("code", groupCode).maybeSingle();
+
   try {
     await checkRateLimit([
       { rl: loginByUser, key: `admin:${groupCode}:${username.toLowerCase()}`, label: "this account" },
       { rl: loginByIp, key: `ip:${ip}`, label: "your network" },
     ]);
   } catch (e) {
+    await recordFailedLogin({ groupId: group?.id ?? null, kind: "admin", attemptedUsername: username, ip, rateLimited: true });
     return { error: (e as Error).message };
   }
 
-  const sb = createAdminClient();
-  const { data: group } = await sb.from("groups").select("id").eq("code", groupCode).maybeSingle();
   if (!group) return { error: "Invalid credentials." };
 
   const { data: admin } = await sb
@@ -235,10 +263,16 @@ export async function loginAdminAction(formData: FormData): Promise<{ error?: st
     .eq("group_id", group.id)
     .eq("username", username)
     .maybeSingle();
-  if (!admin) return { error: "Invalid credentials." };
+  if (!admin) {
+    await recordFailedLogin({ groupId: group.id, kind: "admin", attemptedUsername: username, ip });
+    return { error: "Invalid credentials." };
+  }
 
   const ok = await bcrypt.compare(password, admin.password_hash);
-  if (!ok) return { error: "Invalid credentials." };
+  if (!ok) {
+    await recordFailedLogin({ groupId: group.id, kind: "admin", attemptedUsername: username, ip });
+    return { error: "Invalid credentials." };
+  }
 
   await setSession({ kind: "admin", adminId: admin.id, groupId: group.id, username: admin.username });
   redirect("/admin");
@@ -339,6 +373,20 @@ export async function resetAdminPasswordWithCodeAction(formData: FormData) {
   if (useErr) throw new Error(useErr.message);
 
   return { success: true };
+}
+
+export async function ackFailedLoginsAction() {
+  const s = await getSession();
+  if (!s || s.kind !== "admin") throw new Error("Admin only.");
+  const sb = createAdminClient();
+  await sb
+    .from("admin_failed_login_acks")
+    .upsert({ admin_id: s.adminId, last_seen_at: new Date().toISOString() }, { onConflict: "admin_id" });
+  const { revalidatePath } = await import("next/cache");
+  revalidatePath("/admin");
+  revalidatePath("/admin/manage");
+  revalidatePath("/admin/plans");
+  revalidatePath("/profile");
 }
 
 export async function requireSession() {

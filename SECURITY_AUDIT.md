@@ -220,6 +220,8 @@ Most action handlers verify `group_id`, but spot-check each one — for example,
 
 ## 📝 Change log
 
+- **2026-06-11 (latest)**
+  - Added failed-login alerting: every failed login is recorded in `failed_logins` (with kind, attempted username, IP, rate-limit flag). When admins load any app page, a modal summarizes new attempts since their last ack. Each admin has their own ack cursor (`admin_failed_login_acks`).
 - **2026-06-11 (later)**
   - Fixed #2 / #6 / #8: Rate limiting via Upstash Redis (`src/lib/ratelimit.ts`). Applied to login (user + admin), admin password reset, and username regeneration. Fails open if env vars aren't set.
 - **2026-06-11**

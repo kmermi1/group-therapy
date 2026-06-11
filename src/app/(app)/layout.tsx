@@ -4,6 +4,7 @@ import { redirect } from "next/navigation";
 import { t } from "@/lib/i18n";
 import FeedbackButton from "@/components/FeedbackButton";
 import UnseenFeedbackModal from "@/components/UnseenFeedbackModal";
+import FailedLoginsModal, { type FailedLoginItem } from "@/components/FailedLoginsModal";
 import { createAdminClient } from "@/lib/supabase/server";
 
 export default async function AppLayout({ children }: { children: React.ReactNode }) {
@@ -75,6 +76,38 @@ export default async function AppLayout({ children }: { children: React.ReactNod
     }
   }
 
+  // Fetch new failed logins for admins (since last ack)
+  let failedLoginItems: FailedLoginItem[] = [];
+  let failedLoginTotal = 0;
+  if (s.kind === "admin") {
+    const sb = createAdminClient();
+    const { data: ack } = await sb
+      .from("admin_failed_login_acks")
+      .select("last_seen_at")
+      .eq("admin_id", s.adminId)
+      .maybeSingle();
+    // If no ack yet, only show attempts from the last 24h on first view to avoid overwhelming.
+    const since = ack?.last_seen_at ?? new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
+
+    const { count: totalCount } = await sb
+      .from("failed_logins")
+      .select("*", { count: "exact", head: true })
+      .eq("group_id", s.groupId)
+      .gt("created_at", since);
+    failedLoginTotal = totalCount ?? 0;
+
+    if (failedLoginTotal > 0) {
+      const { data: rows } = await sb
+        .from("failed_logins")
+        .select("id, kind, attempted_username, ip, rate_limited, created_at")
+        .eq("group_id", s.groupId)
+        .gt("created_at", since)
+        .order("created_at", { ascending: false })
+        .limit(50);
+      failedLoginItems = (rows ?? []) as FailedLoginItem[];
+    }
+  }
+
   return (
     <div className="flex-1 flex flex-col pb-24 pt-12">
       <header className="fixed top-0 inset-x-0 z-10 bg-[var(--background)]/90 backdrop-blur-md border-b border-[var(--border)]">
@@ -88,6 +121,9 @@ export default async function AppLayout({ children }: { children: React.ReactNod
       <div className="flex-1">{children}</div>
       <FeedbackButton locale={locale} />
       {unseenFeedback.length > 0 && <UnseenFeedbackModal items={unseenFeedback} />}
+      {failedLoginItems.length > 0 && (
+        <FailedLoginsModal items={failedLoginItems} total={failedLoginTotal} />
+      )}
       <nav className="fixed bottom-0 inset-x-0 z-10 bg-[var(--background)]/90 backdrop-blur-md border-t border-[var(--border)]">
         <div className="max-w-md mx-auto grid grid-cols-4">
           {isAdmin ? (

@@ -56,8 +56,8 @@ export async function setSession(s: Session) {
   c.set(COOKIE_NAME, encodeSession(s), {
     httpOnly: true,
     sameSite: "lax",
-    // No 'secure' flag — works over HTTP for local testing. Over HTTPS
-    // (Vercel) browsers still treat it appropriately.
+    // secure in production; off in dev so HTTP localhost / LAN testing works.
+    secure: process.env.NODE_ENV === "production",
     path: "/",
     maxAge: 60 * 60 * 24 * 90,
   });

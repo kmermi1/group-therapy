@@ -66,6 +66,9 @@ export default function AddPersonalTask({ locale }: { locale: Locale }) {
               <Label htmlFor="pdeadline">Deadline (optional)</Label>
               <Input id="pdeadline" name="deadline" type="date" />
             </div>
+            <p className="text-xs text-[var(--color-foreground)]/60">
+              ℹ️ When checked off, this task moves to your Archive and is deleted automatically after 30 days. You can uncheck it from the Archive to restore it.
+            </p>
           </>
         )}
         {error && <p className="text-sm text-red-500">{error}</p>}

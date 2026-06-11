@@ -94,6 +94,40 @@ export async function archivePersonalTaskAction(formData: FormData) {
   revalidatePath("/today");
 }
 
+export async function restoreArchivedPersonalTaskAction(formData: FormData) {
+  const user = await requireUser();
+  const taskId = String(formData.get("taskId") || "");
+  if (!taskId) throw new Error("Missing taskId.");
+
+  const sb = createAdminClient();
+  // Verify ownership
+  const { data: task } = await sb
+    .from("tasks")
+    .select("id, group_id, created_by_user_id, frequency")
+    .eq("id", taskId)
+    .maybeSingle();
+  if (
+    !task ||
+    task.group_id !== user.groupId ||
+    task.created_by_user_id !== user.userId ||
+    task.frequency !== "once"
+  ) {
+    throw new Error("Task not found.");
+  }
+
+  // Delete all completions for this user+task (one-time tasks have only one)
+  await sb
+    .from("task_completions")
+    .delete()
+    .eq("task_id", taskId)
+    .eq("user_id", user.userId);
+
+  // Clear archived_at to restore
+  await sb.from("tasks").update({ archived_at: null }).eq("id", taskId);
+
+  revalidatePath("/today");
+}
+
 export async function editPersonalTaskAction(formData: FormData) {
   const user = await requireUser();
   const taskId = String(formData.get("taskId") || "");
@@ -235,11 +269,15 @@ export async function toggleCompletionAction(formData: FormData) {
   // confirm task belongs to user's group + is assigned to them or all
   const { data: task } = await sb
     .from("tasks")
-    .select("id, group_id, assignee_user_id, archived_at")
+    .select("id, group_id, assignee_user_id, archived_at, frequency, created_by_user_id")
     .eq("id", taskId)
     .maybeSingle();
-  if (!task || task.group_id !== user.groupId || task.archived_at) throw new Error("Task not found.");
+  if (!task || task.group_id !== user.groupId) throw new Error("Task not found.");
   if (task.assignee_user_id && task.assignee_user_id !== user.userId) throw new Error("Not your task.");
+
+  const isOneTimePersonal = task.frequency === "once" && task.created_by_user_id === user.userId;
+  // Reject only if archived AND not a one-time personal task (those can be unchecked from archive)
+  if (task.archived_at && !isOneTimePersonal) throw new Error("Task not found.");
 
   const { data: existing } = await sb
     .from("task_completions")
@@ -251,12 +289,20 @@ export async function toggleCompletionAction(formData: FormData) {
 
   if (existing) {
     await sb.from("task_completions").delete().eq("id", existing.id);
+    // For one-time personal tasks: restore from archive when unchecked
+    if (isOneTimePersonal && task.archived_at) {
+      await sb.from("tasks").update({ archived_at: null }).eq("id", taskId);
+    }
   } else {
     await sb.from("task_completions").insert({
       task_id: taskId,
       user_id: user.userId,
       completed_for_date: forDate,
     });
+    // For one-time personal tasks: move to archive when checked
+    if (isOneTimePersonal && !task.archived_at) {
+      await sb.from("tasks").update({ archived_at: new Date().toISOString() }).eq("id", taskId);
+    }
   }
   revalidatePath("/today");
   revalidatePath("/leaderboard");
